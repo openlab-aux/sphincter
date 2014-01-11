@@ -5,7 +5,7 @@
 #define PHOTOSENS  8
 
 // motor speed
-#define FAST 255 
+#define FAST 100 
 #define SLOW 100
 
 // lock positions
@@ -23,6 +23,7 @@ void turnLock(int new_position) {
 
     int step;
     int direction;
+    was_interrupted = true;
     
 
     if( new_position > position ) {
@@ -61,7 +62,7 @@ void turnLock(int new_position) {
 
     digitalWrite(direction, LOW);
 
-    delay(40);
+    delay(50);
     analogWrite(PWM, SLOW);
     
     // turn back to correct position
@@ -98,7 +99,6 @@ void setup()  {
     pinMode(PHOTOSENS, INPUT);  // Lichtschranke
     
     position = 0;
-    was_interrupted = false;
 
     analogWrite(PWM, FAST); // Geschwindigkeit (PWM)
     
