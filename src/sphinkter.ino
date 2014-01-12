@@ -150,7 +150,6 @@ void turnLock(int new_position) {
             position += step;
             was_interrupted = true;
             digitalWrite(13,HIGH); // Debug LED
-            delay(PS_DELAY);
 
         }
         // photo sensor becomes free
@@ -158,7 +157,6 @@ void turnLock(int new_position) {
             
             was_interrupted = false;
             digitalWrite(13,LOW); // Debug LED
-            delay(PS_DELAY);
 
         }
         
