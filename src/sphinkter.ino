@@ -16,6 +16,9 @@
 #define LOCK_OPEN   9
 #define DOOR_OPEN   10
 
+// Delay for photo sensor to avoid flickering
+#define PS_DELAY 50
+
 int position;
 boolean was_interrupted;
 
@@ -115,18 +118,17 @@ void turnLock(int new_position) {
 
     int step;
     int direction;
-    was_interrupted = true;
+    was_interrupted = false;
     
-
-    if( new_position > position ) {
-        // open lock
-
-        step = 1; // increment position
+    // open lock
+    if( new_position > position ) {        
+        
+        step =  1; // increment position
         direction = OPEN;
         
     }
-    else if( new_position < position ) {
-        // close lock
+    // close lock 
+    else if( new_position < position ) {       
 
         step = -1; // decrement position
         direction = CLOSE;
@@ -134,40 +136,50 @@ void turnLock(int new_position) {
     }
 
 
-    digitalWrite(direction, HIGH);
+    digitalWrite(direction, HIGH); // motor power on
+
+    // wait for photo sensor to become free
+    while( !digitalRead(PHOTOSENS) );
+    delay(PS_DELAY);
 
     do {
    
-        // Photo sensor becomes interrupted
+        // photo sensor becomes interrupted
         if( !digitalRead(PHOTOSENS) && !was_interrupted ) {
+
             position += step;
-            digitalWrite(13,HIGH); // Debug LED
             was_interrupted = true;
+            digitalWrite(13,HIGH); // Debug LED
+            delay(PS_DELAY);
+
         }
-        // Photo sensor becomes free
+        // photo sensor becomes free
         else if( digitalRead(PHOTOSENS) && was_interrupted ) {
+            
             was_interrupted = false;
             digitalWrite(13,LOW); // Debug LED
+            delay(PS_DELAY);
+
         }
         
     } while( position != new_position );
 
-    digitalWrite(direction, LOW);
+    digitalWrite(direction, LOW); // motor power off
 
-    delay(50);
-    analogWrite(PWM, SLOW);
+    delay(PS_DELAY);
     
-    // turn back to correct position
+    // if necessary turn back to correct position
     if( direction == OPEN ) {
-        Serial.println("zurueck fahren, CLOSE");
-       
-        while( digitalRead(PHOTOSENS) ) { digitalWrite(CLOSE, HIGH); Serial.println("loop");}
+
+        while( digitalRead(PHOTOSENS) ) { digitalWrite(CLOSE, HIGH); } 
         digitalWrite(CLOSE, LOW);
+
     }
     else if( direction == CLOSE ) {
-        Serial.println("zureuck fahren, OPEN");
+        
         while( digitalRead(PHOTOSENS) ) { digitalWrite(OPEN, HIGH); }
         digitalWrite(OPEN, LOW);
+
     }
 
     analogWrite(PWM, FAST);
@@ -200,11 +212,6 @@ void setup()  {
 
     analogWrite(PWM, FAST); // Geschwindigkeit (PWM)
     
-    turnLock(LOCK_OPEN);
-    delay(2000);
-    turnLock(DOOR_OPEN);
-    delay(2000);
-    turnLock(LOCK_CLOSE);
 }
 
 
