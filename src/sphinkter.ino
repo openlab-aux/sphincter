@@ -262,9 +262,8 @@ void setup()  {
     //Serial.println(Ethernet.localIP());
     
 
-    //searchRef();
-    position = 0;
-   
+    searchRef();
+       
 }
 
 
