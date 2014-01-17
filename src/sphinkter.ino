@@ -6,7 +6,7 @@
 
 // motor speed
 #define FAST 255 
-#define SLOW 20
+#define SLOW 50
 
 // lock positions
 #define LOCK_CLOSE  0
@@ -59,11 +59,16 @@ void stateChanged() {
 
 void searchRef() {
 
-  int counter = 0;
-  boolean was_interrupted = false;
+    int counter = 0;
+    boolean was_interrupted = false;
+
+    digitalWrite(R_LED, HIGH);
+    digitalWrite(Y_LED, HIGH);  
+    digitalWrite(G_LED, HIGH);
+ 
   
-  analogWrite(PWM, SLOW); // speed (PWM)
-  digitalWrite(CLOSE,HIGH); // motor power on
+    analogWrite(PWM, SLOW); // speed (PWM)
+    digitalWrite(CLOSE,HIGH); // motor power on
   
   
     do {
@@ -175,7 +180,7 @@ void turnLock(int new_position) {
 
     // turn back after opened the door
     if( new_position == DOOR_OPEN ) {
-        delay(500); 
+        delay(300); 
         turnLock(LOCK_OPEN);
     }
 
