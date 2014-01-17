@@ -1,15 +1,12 @@
-#include <SPI.h>
-#include <Ethernet.h>
-
 // arduino pins
-#define OPEN  4
+#define OPEN  3
 #define CLOSE 2
-#define PWM   3
+#define PWM   5
 #define PHOTOSENS  8
 
 // motor speed
-#define FAST 100 
-#define SLOW 100
+#define FAST 255 
+#define SLOW 20
 
 // lock positions
 #define LOCK_CLOSE  0
@@ -19,96 +16,91 @@
 // Delay for photo sensor to avoid flickering
 #define PS_DELAY 50
 
+//LEDs
+#define R_LED 11
+#define Y_LED 12
+#define G_LED 13
+
+//Buttons
+#define BUTTON_CLOSE 6
+#define BUTTON_OPEN 7
+
 int position;
-boolean was_interrupted;
 
 
-String HTTP_req; // stores the HTTP request
-
-byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
-IPAddress ip(192,168,178,177);
-
-EthernetServer server(80);
-
-void process_request_variables(EthernetClient cl) {
-  Serial.println("Processing variables");
-
-  if (HTTP_req.indexOf("GET /?open_door=true") > -1) {
-    Serial.println("Unlocking door");
-    turnLock(DOOR_OPEN);
-    delay(2000);
-    turnLock(LOCK_OPEN);
-
-  } else if (HTTP_req.indexOf("GET /?close_door=true") > -1) {
-    turnLock(LOCK_CLOSE);
-    Serial.println("Locking door");
+void stateChanged() {
+    
+    digitalWrite(R_LED, LOW);
+    digitalWrite(Y_LED, LOW);  
+    digitalWrite(G_LED, LOW);
+    
+    switch(position) {
+    
+    case LOCK_CLOSE: {
+                         digitalWrite(R_LED, HIGH);
+                         Serial.println("Door locked");
+                         break;
+                     }
+    case LOCK_OPEN:  {
+                         digitalWrite(Y_LED, HIGH); 
+                         Serial.println("Door unlocked");
+                         break;
+                     }
+    case DOOR_OPEN:  {
+                         digitalWrite(G_LED, HIGH); 
+                         Serial.println("Door open");
+                         break;
+                     }
+  
   }
+  
 }
 
 
-void process_request_if_available() {
-  EthernetClient client = server.available();  // try to get client
-    if (client) {  // got client?
-        boolean currentLineIsBlank = true;
-        while (client.connected()) {
-            if (client.available()) {   // client data available to read
-                char c = client.read(); // read 1 byte from client
-                HTTP_req += c;
-                // last line of client request is blank and ends with \n
+void searchRef() {
 
-                if ( HTTP_req.length() > 512 ) {
-                  // Do not handle requests larger than 512 bytes
-                  break;
-                }
-                
-                // respond to client only after last line received
-                if (c == '\n' && currentLineIsBlank) {
-                    // send a standard http response header
-                    client.println("HTTP/1.1 200 OK");
-                    client.println("Content-Type: text/html");
-                    client.println("Connection: close");
-                    client.println();
-                    // send web page
-                    client.println("<!DOCTYPE html>");
-                    client.println("<html>");
-                    client.println("<head>");
-                    client.println("<title>Sphinkter</title>");
+  int counter = 0;
+  boolean was_interrupted = false;
+  
+  analogWrite(PWM, SLOW); // speed (PWM)
+  digitalWrite(CLOSE,HIGH); // motor power on
+  
+  
+    do {
+      
+      delay(15);
+   
+        // photo sensor becomes interrupted
+        if( !digitalRead(PHOTOSENS) && !was_interrupted ) {
 
-                    client.println("</head>");
-                    client.println("<body>");
-                    client.println("<h1>OpenLap Sphinkter Control</h1>");
+            counter = 0;
+            was_interrupted = true;
 
-                    client.println("<ul style='list-style-type: none'>");
+        }
+        // photo sensor becomes free
+        else if( digitalRead(PHOTOSENS) && was_interrupted ) {
+            
+            counter = 0;
+            was_interrupted = false;
 
-                    client.print("<li style='margin: 20px; display:inline;'><a href='/?open_door=true'>");
-                    client.println("<button style='width: 100px;' type='button'>Unlock</button></a></li>");
-                     
-                    client.print("<li style='margin: 20px; display:inline;'><a href='/?close_door=true'>");
-                    client.println("<button style='width: 100px;' type='button'>Lock</button></a></li>");
+        }
+        
+        counter ++;
+        
+    } while( counter < 50 );
+      
+ 
+    digitalWrite(CLOSE,LOW); // motor power off
+    
+    delay(PS_DELAY);
+    
+    // turn back to first pad (= position 0)
+    while( digitalRead(PHOTOSENS) ) { digitalWrite(OPEN, HIGH); }
+    digitalWrite(OPEN, LOW);
+    
+    position = 0;
+    stateChanged();
 
-                    client.println("</ul>");
-
-                    client.println("</body>");
-                    client.println("</html>");
-                    process_request_variables(client);
-                    HTTP_req = "";
-                    break;
-                }
-                // every line of text received from the client ends with \r\n
-                if (c == '\n') {
-                    // last character on line of received text
-                    // starting new line with next character read
-                    currentLineIsBlank = true;
-                } 
-                else if (c != '\r') {
-                    // a text character was received from client
-                    currentLineIsBlank = false;
-                }
-            } // end if (client.available())
-        } // end while (client.connected())
-        delay(1);      // give the web browser time to receive the data
-        client.stop(); // close the connection
-    } // end if (client)
 }
 
 
@@ -118,7 +110,7 @@ void turnLock(int new_position) {
 
     int step;
     int direction;
-    was_interrupted = false;
+    boolean was_interrupted = false;
     
     // open lock
     if( new_position > position ) {        
@@ -135,7 +127,7 @@ void turnLock(int new_position) {
 
     }
 
-
+    analogWrite(PWM, FAST); // speed (PWM)
     digitalWrite(direction, HIGH); // motor power on
 
     // wait for photo sensor to become free
@@ -149,14 +141,12 @@ void turnLock(int new_position) {
 
             position += step;
             was_interrupted = true;
-            digitalWrite(13,HIGH); // Debug LED
 
         }
         // photo sensor becomes free
         else if( digitalRead(PHOTOSENS) && was_interrupted ) {
             
             was_interrupted = false;
-            digitalWrite(13,LOW); // Debug LED
 
         }
         
@@ -180,47 +170,105 @@ void turnLock(int new_position) {
 
     }
 
-    analogWrite(PWM, FAST);
+
+    stateChanged();
+
+    // turn back after opened the door
+    if( new_position == DOOR_OPEN ) {
+        delay(500); 
+        turnLock(LOCK_OPEN);
+    }
 
 }
 
+
+
+void processButtonEvents() {
+  
+    static boolean open_was_pressed = false;
+    static boolean close_was_pressed = false;
+
+    if( digitalRead(BUTTON_OPEN) && digitalRead(BUTTON_CLOSE) ) {
+
+        searchRef();
+        open_was_pressed = false;
+        close_was_pressed = false;
+
+    }
+    else if( digitalRead(BUTTON_OPEN ))  open_was_pressed = true; 
+    else if( digitalRead(BUTTON_CLOSE))  close_was_pressed = true; 
+
+    else if( !digitalRead(BUTTON_OPEN) && open_was_pressed ) {
+        
+        open_was_pressed = false;
+        turnLock(DOOR_OPEN);
+         
+    }
+    else if( !digitalRead(BUTTON_CLOSE) && close_was_pressed ) {
+        
+        close_was_pressed = false;
+        turnLock(LOCK_CLOSE);
+
+    }
+    
+}
+
+
+void processSerialEvents() {
+    
+    char incomingByte;
+    
+    // check if there was data sent
+    if (Serial.available() > 0) {
+            // read the incoming byte:
+            incomingByte = Serial.read();
+
+            switch(incomingByte) {
+                case 'o': turnLock(DOOR_OPEN); break;
+                case 'c': turnLock(LOCK_CLOSE); break;
+                case 'r': searchRef(); break;
+            }
+    }
+
+}
 
 
 
 void setup()  { 
 
-    // serial debuggin
-    Serial.begin(9600);
-    Serial.println("Hello world");
-
-    // start the Ethernet connection and the server:
-    Ethernet.begin(mac, ip);
-    server.begin();
-    Serial.print("server is at ");
-    Serial.println(Ethernet.localIP());
-
+    // LED pins
+    pinMode(R_LED, OUTPUT);
+    pinMode(Y_LED, OUTPUT);
+    pinMode(G_LED, OUTPUT);
+    
     pinMode(OPEN, OUTPUT); // Richtung 1
     pinMode(CLOSE, OUTPUT); // Richtung 2
     
-    pinMode(13, OUTPUT); // Debug LED
-
     pinMode(PHOTOSENS, INPUT);  // Lichtschranke
-    
-    position = 0;
 
-    analogWrite(PWM, FAST); // Geschwindigkeit (PWM)
+    // serial debugging
+    Serial.begin(9600);
+    Serial.println("***** Welcome to fu**ing awesome Sphinkter *****");
+
+    // start the Ethernet connection and the server:
+    //Ethernet.begin(mac, ip);
+    //server.begin();
+    //Serial.print("server is at ");
+    //Serial.println(Ethernet.localIP());
     
+
+    //searchRef();
+    position = 0;
+   
 }
 
 
-void loop()  { 
-    if(digitalRead(PHOTOSENS)) {
-        digitalWrite(13,LOW);
-    }
-    else {
-        digitalWrite(13,HIGH);
-    }
 
-    process_request_if_available();
+void loop()  { 
     
+    processButtonEvents();
+    //process_request_if_available();
+    
+    processSerialEvents(); 
+
 }
