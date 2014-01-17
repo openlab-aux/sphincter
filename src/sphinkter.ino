@@ -66,7 +66,8 @@ void searchRef() {
     digitalWrite(Y_LED, HIGH);  
     digitalWrite(G_LED, HIGH);
  
-  
+    Serial.println("Searching reference point...");
+
     analogWrite(PWM, SLOW); // speed (PWM)
     digitalWrite(CLOSE,HIGH); // motor power on
   
@@ -253,7 +254,15 @@ void setup()  {
 
     // serial debugging
     Serial.begin(9600);
-    Serial.println("***** Welcome to fu**ing awesome Sphinkter *****");
+    Serial.println("************************************************");
+    Serial.println("*                                              *");
+    Serial.println("*     Welcome to fu**ing awesome Sphinkter     *");
+    Serial.println("*                                              *");
+    Serial.println("*        send 'o', 'c' to open / close         *");
+    Serial.println("*        and 'r' to reset positioning          *");
+    Serial.println("*                                              *");
+    Serial.println("************************************************");
+
 
     // start the Ethernet connection and the server:
     //Ethernet.begin(mac, ip);
