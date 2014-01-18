@@ -1,53 +1,61 @@
-// arduino pins
+// driver pins
 #define OPEN  3
 #define CLOSE 2
 #define PWM   5
+
+// photo sensor pin
 #define PHOTOSENS  8
 
-// motor speed
+// motor speed 0-255 (PWM)
 #define FAST 255 
 #define SLOW 50
 
-// lock positions
+// lock positions (photo sensor steps)
 #define LOCK_CLOSE  0
 #define LOCK_OPEN   9
 #define DOOR_OPEN   10
 
-// Delay for photo sensor to avoid flickering
+// delay after motor has stopped to avoid misinterpretations
 #define PS_DELAY 50
 
-//LEDs
-#define R_LED 11
-#define Y_LED 12
-#define G_LED 13
+// LEDs
+#define LED_R 11
+#define LED_Y 12
+#define LED_G 13
 
-//Buttons
+// Buttons
 #define BUTTON_CLOSE 6
 #define BUTTON_OPEN 7
+
 
 int position;
 
 
 void stateChanged() {
-    
-    digitalWrite(R_LED, LOW);
-    digitalWrite(Y_LED, LOW);  
-    digitalWrite(G_LED, LOW);
+
+    // the state of sphinkter has changed. Update LEDs
+    // and submit state over serial connection
+
+    digitalWrite(LED_R, LOW);
+    digitalWrite(LED_Y, LOW);  
+    digitalWrite(LED_G, LOW);
     
     switch(position) {
-    
-    case LOCK_CLOSE: {
-                         digitalWrite(R_LED, HIGH);
+        
+        case LOCK_CLOSE: {
+                         digitalWrite(LED_R, HIGH);
                          Serial.println("Door locked");
                          break;
                      }
-    case LOCK_OPEN:  {
-                         digitalWrite(Y_LED, HIGH); 
+
+        case LOCK_OPEN:  {
+                         digitalWrite(LED_Y, HIGH); 
                          Serial.println("Door unlocked");
                          break;
                      }
-    case DOOR_OPEN:  {
-                         digitalWrite(G_LED, HIGH); 
+
+        case DOOR_OPEN:  {
+                         digitalWrite(LED_G, HIGH); 
                          Serial.println("Door open");
                          break;
                      }
@@ -62,19 +70,19 @@ void searchRef() {
     int counter = 0;
     boolean was_interrupted = false;
 
-    digitalWrite(R_LED, HIGH);
-    digitalWrite(Y_LED, HIGH);  
-    digitalWrite(G_LED, HIGH);
+    digitalWrite(LED_R, HIGH);
+    digitalWrite(LED_Y, HIGH);  
+    digitalWrite(LED_G, HIGH);
  
     Serial.println("Searching reference point...");
 
     analogWrite(PWM, SLOW); // speed (PWM)
-    digitalWrite(CLOSE,HIGH); // motor power on
+    digitalWrite(CLOSE, HIGH); // motor power on
   
   
     do {
-      
-      delay(15);
+        
+        delay(15); // don´t count at cpu speed
    
         // photo sensor becomes interrupted
         if( !digitalRead(PHOTOSENS) && !was_interrupted ) {
@@ -96,7 +104,7 @@ void searchRef() {
     } while( counter < 50 );
       
  
-    digitalWrite(CLOSE,LOW); // motor power off
+    digitalWrite(CLOSE, LOW); // motor power off
     
     delay(PS_DELAY);
     
@@ -112,7 +120,9 @@ void searchRef() {
 
 void turnLock(int new_position) {
 
-    if( new_position == position || new_position < LOCK_CLOSE || new_position > DOOR_OPEN ) return;
+    if( new_position == position 
+            || new_position < LOCK_CLOSE 
+            || new_position > DOOR_OPEN ) return;
 
     int step;
     int direction;
@@ -203,7 +213,6 @@ void processButtonEvents() {
     }
     else if( digitalRead(BUTTON_OPEN ))  open_was_pressed = true; 
     else if( digitalRead(BUTTON_CLOSE))  close_was_pressed = true; 
-
     else if( !digitalRead(BUTTON_OPEN) && open_was_pressed ) {
         
         open_was_pressed = false;
@@ -239,18 +248,15 @@ void processSerialEvents() {
 }
 
 
-
 void setup()  { 
 
-    // LED pins
-    pinMode(R_LED, OUTPUT);
-    pinMode(Y_LED, OUTPUT);
-    pinMode(G_LED, OUTPUT);
-    
-    pinMode(OPEN, OUTPUT); // Richtung 1
-    pinMode(CLOSE, OUTPUT); // Richtung 2
-    
-    pinMode(PHOTOSENS, INPUT);  // Lichtschranke
+    // initialize pins
+    pinMode(LED_R, OUTPUT);
+    pinMode(LED_Y, OUTPUT);
+    pinMode(LED_G, OUTPUT);
+    pinMode(OPEN, OUTPUT);     
+    pinMode(CLOSE, OUTPUT);
+    pinMode(PHOTOSENS, INPUT);
 
     // serial debugging
     Serial.begin(9600);
@@ -293,23 +299,14 @@ void setup()  {
     Serial.println("");
 
 
-    // start the Ethernet connection and the server:
-    //Ethernet.begin(mac, ip);
-    //server.begin();
-    //Serial.print("server is at ");
-    //Serial.println(Ethernet.localIP());
-    
-
     searchRef();
        
 }
 
 
-
 void loop()  { 
     
     processButtonEvents();
-    //process_request_if_available();
     
     processSerialEvents(); 
 
