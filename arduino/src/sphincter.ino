@@ -42,26 +42,25 @@ void stateChanged() {
     
     switch(position) {
         
-        case LOCK_CLOSE: {
-                         digitalWrite(LED_R, HIGH);
-                         Serial.println("Door locked");
-                         break;
-                     }
+    case LOCK_CLOSE:
+      digitalWrite(LED_R, HIGH);
+      Serial.println("Door locked");
+      break;
+      
+    case LOCK_OPEN: 
+      digitalWrite(LED_Y, HIGH); 
+      Serial.println("Door unlocked");
+      break;
+      
+    case DOOR_OPEN:  
+      digitalWrite(LED_G, HIGH); 
+      Serial.println("Door open");
+      break;
 
-        case LOCK_OPEN:  {
-                         digitalWrite(LED_Y, HIGH); 
-                         Serial.println("Door unlocked");
-                         break;
-                     }
-
-        case DOOR_OPEN:  {
-                         digitalWrite(LED_G, HIGH); 
-                         Serial.println("Door open");
-                         break;
-                     }
-  
-  }
-  
+    default:
+      Serial.println("NO KNOWN STATE");
+      break;
+    }
 }
 
 
@@ -239,9 +238,21 @@ void processSerialEvents() {
             incomingByte = Serial.read();
 
             switch(incomingByte) {
-                case 'o': turnLock(DOOR_OPEN); break;
-                case 'c': turnLock(LOCK_CLOSE); break;
-                case 'r': searchRef(); break;
+                
+            case 'o': 
+              turnLock(DOOR_OPEN); 
+              break;
+              
+            case 'c': 
+              turnLock(LOCK_CLOSE); 
+              break;
+            
+            case 'r': 
+              searchRef(); 
+              break;
+
+            default:
+              break;
             }
     }
 
