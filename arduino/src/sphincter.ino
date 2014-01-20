@@ -33,7 +33,7 @@ int position;
 
 void stateChanged() {
 
-    // the state of sphinkter has changed. Update LEDs
+    // the state of sphincter has changed. Update LEDs
     // and submit state over serial connection
 
     digitalWrite(LED_R, LOW);
@@ -262,14 +262,14 @@ void setup()  {
     Serial.begin(9600);
     //Serial.println("************************************************");
     //Serial.println("*                                              *");
-    //Serial.println("*     Welcome to fu**ing awesome Sphinkter     *");
+    //Serial.println("*     Welcome to fu**ing awesome Sphincter     *");
     //Serial.println("*                                              *");
     //Serial.println("*        send 'o', 'c' to open / close         *");
     //Serial.println("*        and 'r' to reset positioning          *");
     //Serial.println("*                                              *");
     //Serial.println("************************************************");
     
-    Serial.println(" welcome to fucking awesome sphinkter!");
+    Serial.println(" welcome to fucking awesome sphincter!");
     Serial.println("");        
     Serial.println("  /     \\             \\            /    \\");
     Serial.println(" |       |             \\          |      |");      
