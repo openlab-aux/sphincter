@@ -250,6 +250,13 @@ void processSerialEvents() {
             case 'r': 
               searchRef(); 
               break;
+              
+            case 's':
+              if (position > 0) {
+                Serial.println("UNLOCKED");
+              } else {
+                Serial.println("LOCKED");
+              }
 
             default:
               break;
