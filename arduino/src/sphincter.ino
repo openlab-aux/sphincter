@@ -8,7 +8,7 @@
 
 // motor speed 0-255 (PWM)
 #define FAST 255 
-#define SLOW 50
+#define SLOW 100
 
 // lock positions (photo sensor steps)
 #define LOCK_CLOSE  0
