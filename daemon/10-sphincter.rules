@@ -1,0 +1,4 @@
+# udev rule for sphincter serial device
+# device appears at /dev/sphincter
+
+SUBSYSTEMS=="usb", KERNEL=="ttyUSB[0-9]*", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{serial}=="A700dzaF", SYMLINK+="sphincter"
