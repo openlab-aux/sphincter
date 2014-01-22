@@ -1,5 +1,5 @@
 # udev rule for sphincter serial device
 # device appears at /dev/sphincter
-# change vendor, product and serial to match the your arduino
+# change vendor, product and serial to match your arduino
 
 SUBSYSTEMS=="usb", ATTRS{idVendor}=="2341", ATTRS{idProduct}=="0043", ATTRS{serial}=="74937303836351319002", SYMLINK+="sphincter"
