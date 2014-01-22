@@ -205,12 +205,18 @@ void processButtonEvents() {
     if( digitalRead(BUTTON_OPEN) && digitalRead(BUTTON_CLOSE) ) {
 
         searchRef();
+        // as in most cases one button gets pressed first,
+        // one of the variables is set to true
         open_was_pressed = false;
         close_was_pressed = false;
 
     }
-    else if( digitalRead(BUTTON_OPEN ))  open_was_pressed = true; 
-    else if( digitalRead(BUTTON_CLOSE))  close_was_pressed = true; 
+    else if( digitalRead(BUTTON_OPEN ) ) {
+        open_was_pressed = true; 
+    }
+    else if( digitalRead(BUTTON_CLOSE) ) {
+        close_was_pressed = true; 
+    }
     else if( !digitalRead(BUTTON_OPEN) && open_was_pressed ) {
         
         open_was_pressed = false;
@@ -233,10 +239,10 @@ void processSerialEvents() {
     
     // check if there was data sent
     if (Serial.available() > 0) {
-            // read the incoming byte:
-            incomingByte = Serial.read();
+            
+        incomingByte = Serial.read();
 
-            switch(incomingByte) {
+        switch(incomingByte) {
                 
             case 'o': 
               turnLock(DOOR_OPEN); 
@@ -255,7 +261,7 @@ void processSerialEvents() {
 
             default:
               break;
-            }
+        }
     }
 
 }
@@ -270,8 +276,8 @@ void setup()  {
     pinMode(OPEN, OUTPUT);     
     pinMode(CLOSE, OUTPUT);
     pinMode(PHOTOSENS, INPUT);
-
-    // serial debugging
+    
+    // initialize serial
     Serial.begin(9600);
     
     searchRef();
@@ -282,7 +288,6 @@ void setup()  {
 void loop()  { 
     
     processButtonEvents();
-    
     processSerialEvents(); 
 
 }
