@@ -278,45 +278,7 @@ void setup()  {
 
     // serial debugging
     Serial.begin(9600);
-    //Serial.println("************************************************");
-    //Serial.println("*                                              *");
-    //Serial.println("*     Welcome to fu**ing awesome Sphincter     *");
-    //Serial.println("*                                              *");
-    //Serial.println("*        send 'o', 'c' to open / close         *");
-    //Serial.println("*        and 'r' to reset positioning          *");
-    //Serial.println("*                                              *");
-    //Serial.println("************************************************");
     
-    Serial.println(" welcome to fucking awesome sphincter!");
-    Serial.println("");        
-    Serial.println("  /     \\             \\            /    \\");
-    Serial.println(" |       |             \\          |      |");      
-    Serial.println(" |       `.             |         |       :");
-    Serial.println(" `        |             |        \\|       |");     
-    Serial.println("  \\       | /       /  \\\\\\   --__ \\\\       :");
-    Serial.println("   \\      \\/   _--~~          ~--__| \\     |");      
-    Serial.println("    \\      \\_-~                    ~-_\\    |");
-    Serial.println("     \\_     \\        _.--------.______\\|   |");    
-    Serial.println("       \\     \\______// _ ___ _ (_(__>  \\   |");
-    Serial.println("        \\   .  C ___)  ______ (_(____>  |  /");    
-    Serial.println("        /\\ |   C ____)/      \\ (_____>  |_/");
-    Serial.println("       / /\\|   C_____)       |  (___>   /  \\");    
-    Serial.println("      |   (   _C_____)\\______/  // _/ /     \\");
-    Serial.println("      |    \\  |__   \\\\_________// (__/       |");  
-    Serial.println("     | \\    \\____)   `----   --'             |");  
-    Serial.println("     |  \\_          ___\\       /_          _/ |"); 
-    Serial.println("    |              /    |     |  \\            |"); 
-    Serial.println("    |             |    /       \\  \\           |"); 
-    Serial.println("    |          / /    |         |  \\           |");
-    Serial.println("    |         / /      \\__/\\___/    |          |");
-    Serial.println("   |           /        |    |       |         |");
-    Serial.println("   |          |         |    |       |         |");
-    Serial.println("");
-    Serial.println("      send 'o', 'c' to open / close");
-    Serial.println("        and 'r' to reset positioning");
-    Serial.println("");
-
-
     searchRef();
        
 }
