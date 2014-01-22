@@ -11,7 +11,7 @@ import thread
 
 class SerialHandler(object):
 
-    def __init__(self, device_name="/dev/tty.usbmodemfa131"):
+    def __init__(self, device_name="/dev/sphincter"):
         self.__ser = serial.Serial(device_name, 9600, timeout=1)
         self.sphincter_locked = True
 
