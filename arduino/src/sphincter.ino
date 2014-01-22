@@ -44,17 +44,17 @@ void stateChanged() {
         
     case LOCK_CLOSE:
       digitalWrite(LED_R, HIGH);
-      Serial.println("Door locked");
+      Serial.println("LOCKED");
       break;
       
     case LOCK_OPEN: 
       digitalWrite(LED_Y, HIGH); 
-      Serial.println("Door unlocked");
+      Serial.println("UNLOCKED");
       break;
       
     case DOOR_OPEN:  
       digitalWrite(LED_G, HIGH); 
-      Serial.println("Door open");
+      Serial.println("OPEN");
       break;
 
     default:
@@ -73,8 +73,6 @@ void searchRef() {
     digitalWrite(LED_Y, HIGH);  
     digitalWrite(LED_G, HIGH);
  
-    Serial.println("Searching reference point...");
-
     analogWrite(PWM, SLOW); // speed (PWM)
     digitalWrite(CLOSE, HIGH); // motor power on
   
@@ -252,11 +250,7 @@ void processSerialEvents() {
               break;
               
             case 's':
-              if (position > 0) {
-                Serial.println("UNLOCKED");
-              } else {
-                Serial.println("LOCKED");
-              }
+              stateChanged();
 
             default:
               break;
