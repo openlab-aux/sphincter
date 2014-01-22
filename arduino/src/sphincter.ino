@@ -15,7 +15,9 @@
 #define LOCK_OPEN   9
 #define DOOR_OPEN   10
 
-// delay after motor has stopped to avoid misinterpretations
+// delay to use after a field change in rotary encoder
+// this gives the disc some time to move further
+// and avoids counting the same field again
 #define PS_DELAY 50
 
 // LEDs
@@ -81,21 +83,15 @@ void searchRef() {
         
         delay(15); // don´t count at cpu speed
    
-        // photo sensor becomes interrupted
-        if( !digitalRead(PHOTOSENS) && !was_interrupted ) {
+        // sets counter=0 at every field change in rotary encoder.
+        // if nothing changes disc got stuck, means lock is at minimum position
+        if( (!digitalRead(PHOTOSENS) && !was_interrupted) || (digitalRead(PHOTOSENS) && was_interrupted) ) {
 
             counter = 0;
-            was_interrupted = true;
+            was_interrupted = !was_interrupted;
 
         }
-        // photo sensor becomes free
-        else if( digitalRead(PHOTOSENS) && was_interrupted ) {
-            
-            counter = 0;
-            was_interrupted = false;
-
-        }
-        
+       
         counter ++;
         
     } while( counter < 50 );
@@ -105,8 +101,13 @@ void searchRef() {
     
     delay(PS_DELAY);
     
-    // turn back to first pad (= position 0)
-    while( digitalRead(PHOTOSENS) ) { digitalWrite(OPEN, HIGH); }
+    // if the rotary encoder is interrupted 
+    // turn back until there is no field in between and than 
+    // turn one field further (= position 0)
+    digitalWrite(OPEN, HIGH); 
+    while( !digitalRead(PHOTOSENS) ); 
+    delay(PS_DELAY);
+    while( digitalRead(PHOTOSENS) );
     digitalWrite(OPEN, LOW);
     
     position = 0;
