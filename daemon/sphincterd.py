@@ -3,16 +3,22 @@
 
 import os
 import serial
+
 import time
-import threading
-import SocketServer
-from collections import deque
 import thread
+
+import hashlib
+
+from BaseHTTPServer import BaseHTTPRequestHandler
+from urlparse import urlparse, parse_qs
+
+from BaseHTTPServer import HTTPServer
+
 
 class SerialHandler(object):
 
-    def __init__(self, device_name="/dev/sphincter"):
-        self.__ser = serial.Serial(device_name, 9600, timeout=1)
+    def __init__(self, device, speed):
+        self.__ser = serial.Serial(device, speed, timeout=1)
         self.sphincter_locked = True
 
         thread.start_new_thread(self.serial_state_read_thread, ())
@@ -29,89 +35,99 @@ class SerialHandler(object):
          
         # read from the serial until empty
         while self.__ser.inWaiting():
-            print(self.__ser.readline().replace('\n', ''))
+            print(self.__ser.readline().strip())
             time.sleep(0.04)
 
         while True:
             self.__ser.write("s")
             time.sleep(0.5)
-            data = self.__ser.readline().replace('\n', '').lower()
-            
-            if data == "locked":
-                self.sphincter_locked = True
-            else:
-                self.sphincter_locked = False
+            data = self.__ser.readline().strip()
 
+            self.sphincter_locked = data == 'LOCKED'
+            
             time.sleep(0.5)
 
-class ThreadedEchoRequestHandler(SocketServer.BaseRequestHandler):
 
-    serial = SerialHandler()
+class TokenFileHandler:
 
-    def __init__(self, request, client_address, server):
-        self._command_dict = dict(
-            unlock=self.__response_unlock,
-            lock  =self.__response_lock,
-            status=self.__response_status
-        )
+    def __init__(self, filename):
+        lines = []
+        self.__hashes = []
+
+        try:
+            f = open(filename)
+            lines = f.readlines()
+            f.close()
+        except IOError:
+            print 'token file not found'
+            return
+
+        for line in lines:
+            self.__hashes.append( line.split(':')[1].rstrip() )
+
+    def token_is_valid(self,token):
+        return hashlib.sha256(token).hexdigest() in self.__hashes
+
+
+class SphincterServer(HTTPServer):
+
+    def __init__(self, *args, **kwargs):
+        serial_handler = None
+        try:
+            self.serial_handler = kwargs['serial_handler']
+            del(kwargs['serial_handler'])
+        except KeyError:
+            raise Exception("Need serial_handler argument")
+        HTTPServer.__init__(self, *args, **kwargs)
+
+
+class GETHandler(BaseHTTPRequestHandler):
+
+    def do_GET(self):
+        query_fields = parse_qs( urlparse(self.path).query )
+
+        param_token  = None
+        param_action = None
         
-        SocketServer.BaseRequestHandler.__init__(self, request, client_address, server)
-        #super(ThreadedEchoRequestHandler, self).__init__(request, client_address, server)
-
-    def handle(self):
-        # read data from the client
-        data = self.request.recv(1024).lower()
-
-        # get function accordingly to the data
-        f = self._command_dict.get(data, lambda data, r: self.request.send("Unknown command: %s" % data))
-        f(data, self.request)
-
-    def __response_unlock(self, data, request):
-        print ("Unlock door")
         try:
-            self.serial.serial_send_unlock()
-            request.send("Door unlocked")
-        except Exception as e:
+            param_action = query_fields['action'][0]
+            param_token  = query_fields['token'][0]
+        except KeyError:
             pass
 
-    def __response_lock(self, data, request):
-        print ("Lock door")
-        try:
-            self.serial.serial_send_lock()
-            request.send("Door locked")
-        except Exception as e:
-            pass
+        t_handler = TokenFileHandler('table')
 
-    def __response_status(self, data, request):
-        print ("Door state")
-        try:
-            request.send("locked?: %s " % str(self.serial.sphincter_locked))
-        except Exception as e:
-            pass
+        message = 'failed'
 
-class ThreadedEchoServer(SocketServer.ThreadingMixIn, SocketServer.UnixStreamServer):
-    pass
+        if( param_action == 'state' ):
 
-if __name__ == "__main__":
-    import socket
-    import threading
-    import signal
-    signal.signal(signal.SIGINT, signal.SIG_DFL)  # react to ctrl-c
+            if( self.server.serial_handler.sphincter_locked ):
+                message = 'locked'
+            else:
+                message = 'unlocked'
 
+        elif( t_handler.token_is_valid(param_token) ):
+            
+            if( param_action == 'open' ):
+                self.server.serial_handler.serial_send_unlock()
+            elif( param_action == 'close' ):
+                self.server.serial_handler.serial_send_lock()
 
-    address = './sphincter_socket'
-    
-    # Make sure the socket does not already exist
-    try:
-        os.unlink(address)
-    except OSError:
-        if os.path.exists(server_address):
-            raise
+            message = 'success'
 
-    server = ThreadedEchoServer(address, ThreadedEchoRequestHandler)
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(message)
 
-    t = threading.Thread(target=server.serve_forever)
-    #t.setDaemon(True) # don't hang on exit
-    t.start()
-    print 'Server loop running in thread:', t.getName()
-    
+        return
+
+    def log_message(self, format, *arg): # do nothing = turn off loggin
+        return
+        
+
+if __name__ == '__main__':
+
+    server = SphincterServer( ('localhost', 8080), GETHandler, serial_handler=SerialHandler('/dev/sphincter', 9600) )
+    print 'Starting server, use <Ctrl-C> to stop'
+    server.serve_forever()
+
