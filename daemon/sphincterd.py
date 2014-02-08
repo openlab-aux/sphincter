@@ -63,7 +63,7 @@ class TokenFileHandler:
             return
 
         for line in lines:
-            self.__hashes.append( line.split(':')[1].rstrip() )
+            self.__hashes.append( line.split(':')[1].strip() )
 
     def token_is_valid(self,token):
         return hashlib.sha256(token).hexdigest() in self.__hashes
@@ -86,15 +86,15 @@ class GETHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         query_fields = parse_qs( urlparse(self.path).query )
 
-        param_token  = None
-        param_action = None
+        param_token  = ''
+        param_action = ''
         
         try:
             param_action = query_fields['action'][0]
             param_token  = query_fields['token'][0]
         except KeyError:
             pass
-
+            
         t_handler = TokenFileHandler('table')
 
         message = 'failed'
