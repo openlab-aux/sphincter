@@ -7,8 +7,8 @@
 #define PHOTOSENS  8
 
 // motor speed 0-255 (PWM)
-#define FAST 255 
-#define SLOW 100
+#define FAST 255
+#define SLOW 90
 
 // lock positions (photo sensor steps)
 #define LOCK_CLOSE  0
@@ -18,7 +18,7 @@
 // delay to use after a field change in rotary encoder
 // this gives the disc some time to move further
 // and avoids counting the same field again
-#define PS_DELAY 50
+#define PS_DELAY 10
 
 // LEDs
 #define LED_R 11
@@ -39,23 +39,23 @@ void stateChanged() {
     // and submit state over serial connection
 
     digitalWrite(LED_R, LOW);
-    digitalWrite(LED_Y, LOW);  
+    digitalWrite(LED_Y, LOW);
     digitalWrite(LED_G, LOW);
-    
+
     switch(position) {
-        
+
     case LOCK_CLOSE:
       digitalWrite(LED_R, HIGH);
       Serial.println("LOCKED");
       break;
-      
-    case LOCK_OPEN: 
-      digitalWrite(LED_Y, HIGH); 
+
+    case LOCK_OPEN:
+      digitalWrite(LED_Y, HIGH);
       Serial.println("UNLOCKED");
       break;
-      
-    case DOOR_OPEN:  
-      digitalWrite(LED_G, HIGH); 
+
+    case DOOR_OPEN:
+      digitalWrite(LED_G, HIGH);
       Serial.println("OPEN");
       break;
 
@@ -72,17 +72,17 @@ void searchRef() {
     boolean was_interrupted = false;
 
     digitalWrite(LED_R, HIGH);
-    digitalWrite(LED_Y, HIGH);  
+    digitalWrite(LED_Y, HIGH);
     digitalWrite(LED_G, HIGH);
- 
+
     analogWrite(PWM, SLOW); // speed (PWM)
     digitalWrite(CLOSE, HIGH); // motor power on
-  
-  
+
+
     do {
-        
+
         delay(15); // don´t count at cpu speed
-   
+
         // sets counter=0 at every field change in rotary encoder.
         // if nothing changes disc got stuck, means lock is at minimum position
         if( (!digitalRead(PHOTOSENS) && !was_interrupted) || (digitalRead(PHOTOSENS) && was_interrupted) ) {
@@ -91,25 +91,25 @@ void searchRef() {
             was_interrupted = !was_interrupted;
 
         }
-       
+
         counter ++;
-        
+
     } while( counter < 50 );
-      
- 
+
+
     digitalWrite(CLOSE, LOW); // motor power off
-    
+
     delay(PS_DELAY);
-    
-    // if the rotary encoder is interrupted 
-    // turn back until there is no field in between and than 
+
+    // if the rotary encoder is interrupted
+    // turn back until there is no field in between and than
     // turn one field further (= position 0)
-    digitalWrite(OPEN, HIGH); 
-    while( !digitalRead(PHOTOSENS) ); 
+    digitalWrite(OPEN, HIGH);
+    while( !digitalRead(PHOTOSENS) );
     delay(PS_DELAY);
     while( digitalRead(PHOTOSENS) );
     digitalWrite(OPEN, LOW);
-    
+
     position = 0;
     stateChanged();
 
@@ -118,23 +118,23 @@ void searchRef() {
 
 void turnLock(int new_position) {
 
-    if( new_position == position 
-            || new_position < LOCK_CLOSE 
+    if( new_position == position
+            || new_position < LOCK_CLOSE
             || new_position > DOOR_OPEN ) return;
 
     int step;
     int direction;
     boolean was_interrupted = false;
-    
+
     // open lock
-    if( new_position > position ) {        
-        
+    if( new_position > position ) {
+
         step =  1; // increment position
         direction = OPEN;
-        
+
     }
-    // close lock 
-    else if( new_position < position ) {       
+    // close lock
+    else if( new_position < position ) {
 
         step = -1; // decrement position
         direction = CLOSE;
@@ -146,10 +146,11 @@ void turnLock(int new_position) {
 
     // wait for photo sensor to become free
     while( !digitalRead(PHOTOSENS) );
+
     delay(PS_DELAY);
 
-    do {
-   
+    while(true) {
+
         // photo sensor becomes interrupted
         if( !digitalRead(PHOTOSENS) && !was_interrupted ) {
 
@@ -159,27 +160,36 @@ void turnLock(int new_position) {
         }
         // photo sensor becomes free
         else if( digitalRead(PHOTOSENS) && was_interrupted ) {
-            
+
             was_interrupted = false;
 
         }
-        
-    } while( position != new_position );
+
+        if( position != new_position ) {
+            delay(PS_DELAY);
+        }
+        else {
+            break;
+        }
+
+    }
 
     digitalWrite(direction, LOW); // motor power off
 
     delay(PS_DELAY);
-    
+
     // if necessary turn back to correct position
     if( direction == OPEN ) {
 
-        while( digitalRead(PHOTOSENS) ) { digitalWrite(CLOSE, HIGH); } 
+        digitalWrite(CLOSE, HIGH);
+        while( digitalRead(PHOTOSENS) );
         digitalWrite(CLOSE, LOW);
 
     }
     else if( direction == CLOSE ) {
-        
-        while( digitalRead(PHOTOSENS) ) { digitalWrite(OPEN, HIGH); }
+
+        digitalWrite(OPEN, HIGH);
+        while( digitalRead(PHOTOSENS) );
         digitalWrite(OPEN, LOW);
 
     }
@@ -189,7 +199,7 @@ void turnLock(int new_position) {
 
     // turn back after opened the door
     if( new_position == DOOR_OPEN ) {
-        delay(300); 
+        delay(300);
         turnLock(LOCK_OPEN);
     }
 
@@ -198,7 +208,7 @@ void turnLock(int new_position) {
 
 
 void processButtonEvents() {
-  
+
     static boolean open_was_pressed = false;
     static boolean close_was_pressed = false;
 
@@ -212,50 +222,50 @@ void processButtonEvents() {
 
     }
     else if( digitalRead(BUTTON_OPEN ) ) {
-        open_was_pressed = true; 
+        open_was_pressed = true;
     }
     else if( digitalRead(BUTTON_CLOSE) ) {
-        close_was_pressed = true; 
+        close_was_pressed = true;
     }
     else if( !digitalRead(BUTTON_OPEN) && open_was_pressed ) {
-        
+
         open_was_pressed = false;
         turnLock(DOOR_OPEN);
-         
+
     }
     else if( !digitalRead(BUTTON_CLOSE) && close_was_pressed ) {
-        
+
         close_was_pressed = false;
         turnLock(LOCK_CLOSE);
 
     }
-    
+
 }
 
 
 void processSerialEvents() {
-    
+
     char incomingByte;
-    
+
     // check if there was data sent
     if (Serial.available() > 0) {
-            
+
         incomingByte = Serial.read();
 
         switch(incomingByte) {
-                
-            case 'o': 
-              turnLock(DOOR_OPEN); 
+
+            case 'o':
+              turnLock(DOOR_OPEN);
               break;
-              
-            case 'c': 
-              turnLock(LOCK_CLOSE); 
+
+            case 'c':
+              turnLock(LOCK_CLOSE);
               break;
-            
-            case 'r': 
-              searchRef(); 
+
+            case 'r':
+              searchRef();
               break;
-              
+
             case 's':
               stateChanged();
 
@@ -267,27 +277,27 @@ void processSerialEvents() {
 }
 
 
-void setup()  { 
+void setup()  {
 
     // initialize pins
     pinMode(LED_R, OUTPUT);
     pinMode(LED_Y, OUTPUT);
     pinMode(LED_G, OUTPUT);
-    pinMode(OPEN, OUTPUT);     
+    pinMode(OPEN, OUTPUT);
     pinMode(CLOSE, OUTPUT);
     pinMode(PHOTOSENS, INPUT);
-    
+
     // initialize serial
     Serial.begin(9600);
-    
+
     searchRef();
-       
+
 }
 
 
-void loop()  { 
-    
+void loop()  {
+
     processButtonEvents();
-    processSerialEvents(); 
+    processSerialEvents();
 
 }
