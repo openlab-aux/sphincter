@@ -1,4 +1,4 @@
-// driver pins
+// motor driver pins
 #define OPEN  3
 #define CLOSE 2
 #define PWM   5
@@ -10,10 +10,10 @@
 #define FAST 255
 #define SLOW 90
 
-// lock positions (photo sensor steps)
+// lock positions (rotary encoder steps)
 #define LOCK_CLOSE  0
 #define LOCK_OPEN   9
-#define DOOR_OPEN   10
+#define DOOR_OPEN  10
 
 // delay to use after a field change in rotary encoder
 // this gives the disc some time to move further
@@ -27,7 +27,7 @@
 
 // Buttons
 #define BUTTON_CLOSE 6
-#define BUTTON_OPEN 7
+#define BUTTON_OPEN  7
 
 
 int position;
@@ -44,29 +44,33 @@ void stateChanged() {
 
     switch(position) {
 
-    case LOCK_CLOSE:
-      digitalWrite(LED_R, HIGH);
-      Serial.println("LOCKED");
-      break;
+        case LOCK_CLOSE:
+            digitalWrite(LED_R, HIGH);
+            Serial.println("LOCKED");
+            break;
 
-    case LOCK_OPEN:
-      digitalWrite(LED_Y, HIGH);
-      Serial.println("UNLOCKED");
-      break;
+        case LOCK_OPEN:
+            digitalWrite(LED_Y, HIGH);
+            Serial.println("UNLOCKED");
+            break;
 
-    case DOOR_OPEN:
-      digitalWrite(LED_G, HIGH);
-      Serial.println("OPEN");
-      break;
+        case DOOR_OPEN:
+            digitalWrite(LED_G, HIGH);
+            Serial.println("OPEN");
+            break;
 
-    default:
-      Serial.println("NO KNOWN STATE");
-      break;
+        default:
+            Serial.println("NO KNOWN STATE");
+            break;
     }
+
 }
 
 
-void searchRef() {
+void referenceRun() {
+
+    // turns the lock in closing direction until it blocks
+    // to figure out its minimum position
 
     int counter = 0;
     boolean was_interrupted = false;
@@ -75,17 +79,17 @@ void searchRef() {
     digitalWrite(LED_Y, HIGH);
     digitalWrite(LED_G, HIGH);
 
-    analogWrite(PWM, SLOW); // speed (PWM)
-    digitalWrite(CLOSE, HIGH); // motor power on
-
+    analogWrite(PWM, SLOW);     // speed (PWM)
+    digitalWrite(CLOSE, HIGH);  // start motor
 
     do {
 
-        delay(15); // don´t count at cpu speed
+        delay(15); // don´t count at "cpu speed"
 
-        // sets counter=0 at every field change in rotary encoder.
-        // if nothing changes disc got stuck, means lock is at minimum position
-        if( (!digitalRead(PHOTOSENS) && !was_interrupted) || (digitalRead(PHOTOSENS) && was_interrupted) ) {
+        // if nothing changes disc got stuck
+        // means that the lock is at its minimum position
+        if( (!digitalRead(PHOTOSENS) && !was_interrupted)
+         || (digitalRead(PHOTOSENS) && was_interrupted) ) {
 
             counter = 0;
             was_interrupted = !was_interrupted;
@@ -96,8 +100,7 @@ void searchRef() {
 
     } while( counter < 50 );
 
-
-    digitalWrite(CLOSE, LOW); // motor power off
+    digitalWrite(CLOSE, LOW);   // stop motor
 
     delay(PS_DELAY);
 
@@ -119,8 +122,8 @@ void searchRef() {
 void turnLock(int new_position) {
 
     if( new_position == position
-            || new_position < LOCK_CLOSE
-            || new_position > DOOR_OPEN ) return;
+       || new_position < LOCK_CLOSE
+       || new_position > DOOR_OPEN ) return;
 
     int step;
     int direction;
@@ -141,8 +144,8 @@ void turnLock(int new_position) {
 
     }
 
-    analogWrite(PWM, FAST); // speed (PWM)
-    digitalWrite(direction, HIGH); // motor power on
+    analogWrite(PWM, FAST);         // set speed (PWM)
+    digitalWrite(direction, HIGH);  // motor power on
 
     // wait for photo sensor to become free
     while( !digitalRead(PHOTOSENS) );
@@ -214,7 +217,7 @@ void processButtonEvents() {
 
     if( digitalRead(BUTTON_OPEN) && digitalRead(BUTTON_CLOSE) ) {
 
-        searchRef();
+        referenceRun();
         // as in most cases one button gets pressed first,
         // one of the variables is set to true
         open_was_pressed = false;
@@ -263,7 +266,7 @@ void processSerialEvents() {
               break;
 
             case 'r':
-              searchRef();
+              referenceRun();
               break;
 
             case 's':
@@ -283,14 +286,14 @@ void setup()  {
     pinMode(LED_R, OUTPUT);
     pinMode(LED_Y, OUTPUT);
     pinMode(LED_G, OUTPUT);
-    pinMode(OPEN, OUTPUT);
+    pinMode(OPEN,  OUTPUT);
     pinMode(CLOSE, OUTPUT);
     pinMode(PHOTOSENS, INPUT);
 
     // initialize serial
     Serial.begin(9600);
 
-    searchRef();
+    referenceRun();
 
 }
 
