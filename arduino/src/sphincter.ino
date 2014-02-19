@@ -8,7 +8,8 @@
 
 // motor speed 0-255 (PWM)
 #define FAST 255
-#define SLOW 90
+#define SLOW  80
+#define REF   70
 
 // lock positions (rotary encoder steps)
 #define LOCK_CLOSE  0
@@ -29,6 +30,11 @@
 #define BUTTON_CLOSE 6
 #define BUTTON_OPEN  7
 
+// ToDo:
+// Timeout for a field change in rotary encoder
+// = maximum time between two fields
+// needs to be speed independent
+//#define CH_TIMEOUT
 
 int position;
 
@@ -79,7 +85,7 @@ void referenceRun() {
     digitalWrite(LED_Y, HIGH);
     digitalWrite(LED_G, HIGH);
 
-    analogWrite(PWM, SLOW);     // speed (PWM)
+    analogWrite(PWM, REF);     // speed (PWM)
     digitalWrite(CLOSE, HIGH);  // start motor
 
     do {
@@ -107,6 +113,7 @@ void referenceRun() {
     // if the rotary encoder is interrupted
     // turn back until there is no field in between and than
     // turn one field further (= position 0)
+    digitalWrite(PWM, FAST);
     digitalWrite(OPEN, HIGH);
     while( !digitalRead(PHOTOSENS) );
     delay(PS_DELAY);
@@ -129,22 +136,24 @@ void turnLock(int new_position) {
     int direction;
     boolean was_interrupted = false;
 
+    analogWrite(PWM, FAST);  // set speed
+
     // open lock
     if( new_position > position ) {
 
-        step =  1; // increment position
+        step =  1;           // increment position
         direction = OPEN;
 
     }
     // close lock
     else if( new_position < position ) {
 
-        step = -1; // decrement position
+        step = -1;           // decrement position
         direction = CLOSE;
 
     }
 
-    analogWrite(PWM, FAST);         // set speed (PWM)
+
     digitalWrite(direction, HIGH);  // motor power on
 
     // wait for photo sensor to become free
@@ -173,6 +182,13 @@ void turnLock(int new_position) {
         }
         else {
             break;
+        }
+
+        if( (new_position == LOCK_CLOSE) && position > LOCK_CLOSE + 3) {
+            analogWrite(PWM, SLOW);
+        }
+        else {
+            analogWrite(PWM, FAST);
         }
 
     }

@@ -1,8 +1,9 @@
 #!/usr/bin/env python2
-# -*- coding: utf-8 -*- 
+# -*- coding: utf-8 -*-
 
 import os
 import serial
+from serial import SerialException
 
 import time
 import thread
@@ -18,34 +19,48 @@ from BaseHTTPServer import HTTPServer
 class SerialHandler(object):
 
     def __init__(self, device, speed):
-        self.__ser = serial.Serial(device, speed, timeout=1)
+
+        self.__device = device
+        self.__speed = speed
+
+        if not self.__connect():
+            sys.exit('Error: sphincter not connected?')
+
         self.sphincter_locked = True
+        thread.start_new_thread(self.state_read_thread, ())
 
-        thread.start_new_thread(self.serial_state_read_thread, ())
+    def __connect(self):
+        try:
+            self.__ser = serial.Serial(self.__device, self.__speed)
+        except:
+            return False
+        return True
 
-    def serial_send_lock(self):
-        self.__ser.write('c')
+    def __reconnect(self):
+        while not self.__connect():
+            time.sleep(10000)
 
-    def serial_send_unlock(self):
-        self.__ser.write('o')
-    
-    def serial_state_read_thread(self):
-        # wait for the arduino to reset
-        time.sleep(1.5)
-         
-        # read from the serial until empty
-        while self.__ser.inWaiting():
-            print(self.__ser.readline().strip())
-            time.sleep(0.04)
+    def send_lock(self):
+        try:
+            self.__ser.write('c')
+        except:
+            self.__reconnect()
 
+    def send_unlock(self):
+        try:
+            self.__ser.write('o')
+        except:
+            self.__reconnect()
+
+    def state_read_thread(self):
         while True:
-            self.__ser.write("s")
-            time.sleep(0.5)
-            data = self.__ser.readline().strip()
-
+            try:
+                data = self.__ser.readline().strip()
+            except:
+                self.__reconnect()
+            print(data)
             self.sphincter_locked = data == 'LOCKED'
-            
-            time.sleep(0.5)
+
 
 
 class TokenFileHandler:
@@ -88,13 +103,13 @@ class GETHandler(BaseHTTPRequestHandler):
 
         param_token  = ''
         param_action = ''
-        
+
         try:
             param_action = query_fields['action'][0]
             param_token  = query_fields['token'][0]
         except KeyError:
             pass
-            
+
         t_handler = TokenFileHandler('table')
 
         message = 'failed'
@@ -107,11 +122,11 @@ class GETHandler(BaseHTTPRequestHandler):
                 message = 'unlocked'
 
         elif( t_handler.token_is_valid(param_token) ):
-            
+
             if( param_action == 'open' ):
-                self.server.serial_handler.serial_send_unlock()
+                self.server.serial_handler.send_unlock()
             elif( param_action == 'close' ):
-                self.server.serial_handler.serial_send_lock()
+                self.server.serial_handler.send_lock()
 
             message = 'success'
 
@@ -123,7 +138,7 @@ class GETHandler(BaseHTTPRequestHandler):
 
     def log_message(self, format, *arg): # do nothing = turn off loggin
         return
-        
+
 
 if __name__ == '__main__':
 
