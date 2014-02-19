@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import sys
 import serial
 from serial import SerialException
 
@@ -32,31 +33,38 @@ class SerialHandler(object):
     def __connect(self):
         try:
             self.__ser = serial.Serial(self.__device, self.__speed)
-        except:
+        except SerialException:
             return False
         return True
 
     def __reconnect(self):
+        try:
+            self.__ser.close()
+        except SerialException:
+            pass
+
+        print('reconnecting...')
+
         while not self.__connect():
-            time.sleep(10000)
+            time.sleep(1000)
 
     def send_lock(self):
-        try:
+        try:k
             self.__ser.write('c')
-        except:
+        except ValueError:
             self.__reconnect()
 
     def send_unlock(self):
         try:
             self.__ser.write('o')
-        except:
+        except ValueError:
             self.__reconnect()
 
     def state_read_thread(self):
         while True:
             try:
                 data = self.__ser.readline().strip()
-            except:
+            except ValueError:
                 self.__reconnect()
             print(data)
             self.sphincter_locked = data == 'LOCKED'
