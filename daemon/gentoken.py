@@ -7,6 +7,7 @@ import string
 import random
 import hashlib
 import re
+from gentoken_conf import config
 
 from smtplib import SMTP_SSL as SMTP
 from email.MIMEText import MIMEText
@@ -29,7 +30,7 @@ def write_hash(filename, identifier, token_hash):
         sys.exit('Error: Could not write into ' + filename)
 
 
-def send_token(token, address, server='', username='', password=''):
+def send_token(token, address, server, username, password):
 
     content = "Dein Token fuer den Zugang zum OpenLab ist da:\n\n"
     content += "\t" + token
@@ -66,7 +67,7 @@ if __name__ == "__main__":
 
     token = gen_token()
 
-    send_token(token[0], address)
+    send_token(token[0], address, config['server'], config['username'], config['password'])
     print('Token was successfully sent to ' + address)
     write_hash(filename, address, token[1])
     print('Hash written into ' + filename)
