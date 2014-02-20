@@ -20,7 +20,7 @@ from urlparse import urlparse, parse_qs
 # Serial wrapper class for sphincter
 class SerialHandler:
 
-    def __init__(self, device='./tty1', speed=9600):
+    def __init__(self, device='/dev/sphincter', speed=9600):
         self.__ser          = serial.Serial()
         self.__ser.baudrate = speed
         self.__ser.port     = device
