@@ -3,6 +3,7 @@
 
 import os
 import sys
+
 import serial
 from serial import SerialException
 
@@ -12,63 +13,76 @@ import thread
 import hashlib
 
 from BaseHTTPServer import BaseHTTPRequestHandler
+from BaseHTTPServer import HTTPServer
 from urlparse import urlparse, parse_qs
 
-from BaseHTTPServer import HTTPServer
 
+# Serial wrapper class for sphincter
+class SerialHandler:
 
-class SerialHandler(object):
+    def __init__(self, device='./tty1', speed=9600):
+        self.__ser          = serial.Serial()
+        self.__ser.baudrate = speed
+        self.__ser.port     = device
 
-    def __init__(self, device, speed):
+        if not self.__connect__():
+            sys.exit('Error: Sphincter not connected')
 
-        self.__device = device
-        self.__speed = speed
+        self.__reconnecting = False
+        self.state = 'LOCKED'
+        thread.start_new_thread(self.__state_read_thread__, ())
 
-        if not self.__connect():
-            sys.exit('Error: sphincter not connected?')
-
-        self.sphincter_locked = True
-        thread.start_new_thread(self.state_read_thread, ())
-
-    def __connect(self):
+    def __connect__(self):
         try:
-            self.__ser = serial.Serial(self.__device, self.__speed)
-        except SerialException:
+            if self.__ser.isOpen():
+                self.__ser.close()
+
+            self.__ser.open()
+            return True
+
+        except (SerialException, ValueError, OSError):
             return False
-        return True
 
-    def __reconnect(self):
-        try:
-            self.__ser.close()
-        except SerialException:
-            pass
+    def __reconnect__(self):
+        i = 1
+        self.state = 'ERROR'
+        self.__reconnecting = True
+        while True:
+            sys.stdout.write('reconnecting (' + str(i) + ')...')
 
-        print('reconnecting...')
+            if self.__connect__():
+                sys.stdout.write(' success!\n')
+                self.__reconnecting = False
+                break
 
-        while not self.__connect():
-            time.sleep(1000)
+            sys.stdout.write(' failed!\n')
+            i += 1
+            time.sleep(5)
 
-    def send_lock(self):
-        try:k
-            self.__ser.write('c')
-        except ValueError:
-            self.__reconnect()
-
-    def send_unlock(self):
-        try:
-            self.__ser.write('o')
-        except ValueError:
-            self.__reconnect()
-
-    def state_read_thread(self):
+    def __state_read_thread__(self):
+        data = ''
         while True:
             try:
                 data = self.__ser.readline().strip()
-            except ValueError:
-                self.__reconnect()
+            except SerialException:
+                self.__reconnect__()
             print(data)
-            self.sphincter_locked = data == 'LOCKED'
+            self.state = data
 
+    def __send__(self, data):
+        try:
+            self.__ser.write(data)
+            return True
+        except (ValueError, SerialException):
+            if not self.__reconnecting:
+                self.__reconnect__()
+            return False
+
+    def send_lock(self):
+        return self.__send__('c')
+
+    def send_unlock(self):
+        return self.__send__('o')
 
 
 class TokenFileHandler:
@@ -120,23 +134,23 @@ class GETHandler(BaseHTTPRequestHandler):
 
         t_handler = TokenFileHandler('table')
 
-        message = 'failed'
+        message = 'NOT ALLOWED'
 
         if( param_action == 'state' ):
 
-            if( self.server.serial_handler.sphincter_locked ):
-                message = 'locked'
-            else:
-                message = 'unlocked'
+            message = self.server.serial_handler.state
 
         elif( t_handler.token_is_valid(param_token) ):
 
             if( param_action == 'open' ):
-                self.server.serial_handler.send_unlock()
+                success = self.server.serial_handler.send_unlock()
             elif( param_action == 'close' ):
-                self.server.serial_handler.send_lock()
+                success = self.server.serial_handler.send_lock()
 
-            message = 'success'
+            if success:
+                message = 'SUCCESS'
+            else:
+                message = 'FAILED'
 
         self.send_response(200)
         self.end_headers()
@@ -144,13 +158,13 @@ class GETHandler(BaseHTTPRequestHandler):
 
         return
 
-    def log_message(self, format, *arg): # do nothing = turn off loggin
+    def log_message(self, format, *arg): # do nothing = turn off logging
         return
 
 
 if __name__ == '__main__':
 
-    server = SphincterServer( ('localhost', 8080), GETHandler, serial_handler=SerialHandler('/dev/sphincter', 9600) )
+    server = SphincterServer( ('localhost', 8080), GETHandler, serial_handler=SerialHandler() )
     print 'Starting server, use <Ctrl-C> to stop'
     server.serve_forever()
 
