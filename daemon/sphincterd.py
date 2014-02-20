@@ -134,9 +134,9 @@ class GETHandler(BaseHTTPRequestHandler):
         t_handler = TokenFileHandler('table')
 
         message = 'NOT ALLOWED'
+        success = False
 
         if( param_action == 'state' ):
-
             message = self.server.serial_handler.state
 
         elif( t_handler.token_is_valid(param_token) ):
