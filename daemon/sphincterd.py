@@ -30,7 +30,7 @@ class SerialHandler:
 
         self.__reconnecting = False
         self.state = 'LOCKED'
-        thread.start_new_thread(self.__state_read_thread__, ())
+        thread.start_new_thread(self.__state_read_thread, ())
 
     def __connect(self):
         try:
