@@ -32,8 +32,12 @@ def write_hash(filename, identifier, token_hash):
 
 def send_token(token, address, server, username, password):
 
-    content = "Dein Token fuer den Zugang zum OpenLab ist da:\n\n"
-    content += "\t" + token
+    content =  "Dein Token fuer den Zugang zum OpenLab ist da:\n\n"
+    content += "\t" + token + "\n\n"
+    content += "Nutze diese Links:\n"
+    content += "- Tuer oeffnen: https://labctl.ffa/sphincter/?action=open&token=" + token + "\n"
+    content += "- Tuer schliessen: https://labctl.ffa/sphincter/?action=close&token=" + token + "\n"
+    content += "- Status abfragen: https://labctl.ffa/sphincter/?action=state"
 
     sender = 'donotreply@openlab-augsburg.de'
 
