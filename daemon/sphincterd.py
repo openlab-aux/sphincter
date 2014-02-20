@@ -96,8 +96,7 @@ class TokenFileHandler:
             lines = f.readlines()
             f.close()
         except IOError:
-            print 'token file not found'
-            return
+            sys.exit('token file not found')
 
         for line in lines:
             self.__hashes.append( line.split(':')[1].strip() )
