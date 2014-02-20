@@ -25,14 +25,14 @@ class SerialHandler:
         self.__ser.baudrate = speed
         self.__ser.port     = device
 
-        if not self.__connect__():
+        if not self.__connect():
             sys.exit('Error: Sphincter not connected')
 
         self.__reconnecting = False
         self.state = 'LOCKED'
         thread.start_new_thread(self.__state_read_thread__, ())
 
-    def __connect__(self):
+    def __connect(self):
         try:
             if self.__ser.isOpen():
                 self.__ser.close()
@@ -43,14 +43,14 @@ class SerialHandler:
         except (SerialException, ValueError, OSError):
             return False
 
-    def __reconnect__(self):
+    def __reconnect(self):
         i = 1
         self.state = 'ERROR'
         self.__reconnecting = True
         while True:
             sys.stdout.write('reconnecting (' + str(i) + ')...')
 
-            if self.__connect__():
+            if self.__connect():
                 sys.stdout.write(' success!\n')
                 self.__reconnecting = False
                 break
@@ -59,30 +59,30 @@ class SerialHandler:
             i += 1
             time.sleep(5)
 
-    def __state_read_thread__(self):
+    def __state_read_thread(self):
         data = ''
         while True:
             try:
                 data = self.__ser.readline().strip()
             except SerialException:
-                self.__reconnect__()
+                self.__reconnect()
             print(data)
             self.state = data
 
-    def __send__(self, data):
+    def __send(self, data):
         try:
             self.__ser.write(data)
             return True
         except (ValueError, SerialException):
             if not self.__reconnecting:
-                self.__reconnect__()
+                self.__reconnect()
             return False
 
     def send_lock(self):
-        return self.__send__('c')
+        return self.__send('c')
 
     def send_unlock(self):
-        return self.__send__('o')
+        return self.__send('o')
 
 
 class TokenFileHandler:
