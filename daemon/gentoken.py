@@ -11,7 +11,7 @@ from gentoken_conf import config
 
 from smtplib import SMTP_SSL as SMTP
 from email.MIMEText import MIMEText
-
+from time import gmtime, strftime
 
 def gen_token(size=32):
     chars = string.ascii_uppercase + string.digits + string.lowercase
@@ -44,6 +44,7 @@ def send_token(token, address, server, username, password):
     try:
         msg = MIMEText(content, 'plain')
         msg['Subject'] = 'Dein OpenLab-Zugang'
+	msg['Date'] = strftime("%a, %d %b %Y %H:%M:%S +0000", gmtime())
         msg['From']    = sender
 
         conn = SMTP(server)
