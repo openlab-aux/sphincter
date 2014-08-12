@@ -153,9 +153,13 @@ class GETHandler(BaseHTTPRequestHandler):
                 except Exception:
                     pass
 
-                success = self.server.serial_handler.send_unlock()
+                if self.server.serial_handler.send_unlock():
+                    message = 'UNLOCKED'
+                else:
+                    message = 'FAILED'
+
             elif( param_action == 'close' ):
-		try:
+                try:
                     urllib2.urlopen('http://api.openlab-augsburg.de/spacecgi.py?update_device_count=0&token=ba7d8f3e8fa416603bb9f46b4eff880c')
                 except Exception:
                     pass
@@ -165,12 +169,11 @@ class GETHandler(BaseHTTPRequestHandler):
                 except Exception:
                     pass
 
-                success = self.server.serial_handler.send_lock()
+                if self.server.serial_handler.send_lock():
+                    message = 'LOCKED'
+                else:
+                    message = 'FAILED'
 
-            if success:
-                message = 'SUCCESS'
-            else:
-                message = 'FAILED'
 
         self.send_response(200)
         self.end_headers()
