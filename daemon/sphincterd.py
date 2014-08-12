@@ -11,6 +11,7 @@ import time
 import thread
 
 import hashlib
+import urllib2
 
 from BaseHTTPServer import BaseHTTPRequestHandler
 from BaseHTTPServer import HTTPServer
@@ -142,8 +143,28 @@ class GETHandler(BaseHTTPRequestHandler):
         elif( t_handler.token_is_valid(param_token) ):
 
             if( param_action == 'open' ):
+                try:
+                    urllib2.urlopen('http://api.openlab-augsburg.de/spacecgi.py?update_device_count=1&token=ba7d8f3e8fa416603bb9f46b4eff880c')
+                except Exception:
+                    pass
+
+                try:
+                    urllib2.urlopen('http://10.11.8.116:12345/sphincter?door=open')
+                except Exception:
+                    pass
+
                 success = self.server.serial_handler.send_unlock()
             elif( param_action == 'close' ):
+		try:
+                    urllib2.urlopen('http://api.openlab-augsburg.de/spacecgi.py?update_device_count=0&token=ba7d8f3e8fa416603bb9f46b4eff880c')
+                except Exception:
+                    pass
+
+                try:
+                    urllib2.urlopen('http://10.11.8.116:12345/sphincter?door=close')
+                except Exception:
+                    pass
+
                 success = self.server.serial_handler.send_lock()
 
             if success:
