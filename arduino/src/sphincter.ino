@@ -30,6 +30,12 @@
 #define BUTTON_CLOSE 6
 #define BUTTON_OPEN  7
 
+// Serial responses
+#define RESPONSE_LOCKED   "LOCKED"
+#define RESPONSE_UNLOCKED "UNLOCKED"
+#define RESPONSE_OPEN     "OPEN"
+#define RESPONSE_UNKNOWN  "UNKNOWN"
+
 // ToDo:
 // Timeout for a field change in rotary encoder
 // = maximum time between two fields
@@ -52,21 +58,21 @@ void stateChanged() {
 
         case LOCK_CLOSE:
             digitalWrite(LED_R, HIGH);
-            Serial.println("LOCKED");
+            Serial.println(RESPONSE_LOCKED);
             break;
 
         case LOCK_OPEN:
             digitalWrite(LED_Y, HIGH);
-            Serial.println("UNLOCKED");
+            Serial.println(RESPONSE_UNLOCKED);
             break;
 
         case DOOR_OPEN:
             digitalWrite(LED_G, HIGH);
-            Serial.println("OPEN");
+            Serial.println(RESPONSE_OPEN);
             break;
 
         default:
-            Serial.println("NO KNOWN STATE");
+            Serial.println(RESPONSE_UNKNOWN);
             break;
     }
 
