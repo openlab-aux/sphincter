@@ -34,6 +34,7 @@
 #define RESPONSE_LOCKED   "LOCKED"
 #define RESPONSE_UNLOCKED "UNLOCKED"
 #define RESPONSE_OPEN     "OPEN"
+#define RESPONSE_ACK      "ACK"
 #define RESPONSE_UNKNOWN  "UNKNOWN"
 
 // ToDo:
@@ -280,22 +281,24 @@ void processSerialEvents() {
         switch(incomingByte) {
 
             case 'o':
+              Serial.println(RESPONSE_ACK);
               turnLock(DOOR_OPEN);
               break;
 
             case 'c':
+              Serial.println(RESPONSE_ACK);
               turnLock(LOCK_CLOSE);
               break;
 
             case 'r':
+              Serial.println(RESPONSE_ACK);
               referenceRun();
               break;
 
             case 's':
               stateChanged();
-
-            default:
               break;
+
         }
     }
 
