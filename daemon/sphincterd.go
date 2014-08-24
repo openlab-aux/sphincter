@@ -112,7 +112,7 @@ func main() {
 		9600,
 		nil}
 
-	var httpRespQueue []*chan string
+	var httpRespQueue []chan string
 	serial_chn := make(chan string)
 
 	sphincter.listenAndReconnect(serial_chn)
@@ -127,7 +127,7 @@ func main() {
 		switch r.Form.Get("action") {
 		case ACN_CLOSE, ACN_OPEN, ACN_STATE:
 			chn := make(chan string)
-			httpRespQueue = append(httpRespQueue, &chn)
+			httpRespQueue = append(httpRespQueue, chn)
 
 			// wait for corresponding serial response
 			fmt.Fprint(w, <-chn)
@@ -146,7 +146,7 @@ func main() {
 
 		// check if there are waiting http connections
 		if len(httpRespQueue) > 0 {
-			*httpRespQueue[0] <- serial_data
+			httpRespQueue[0] <- serial_data
 			httpRespQueue = httpRespQueue[1:]
 		}
 	}
