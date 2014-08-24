@@ -1,8 +1,12 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"strings"
@@ -29,6 +33,8 @@ const (
 	ACN_OPEN  string = "open"
 	ACN_CLOSE string = "close"
 	ACN_STATE string = "state"
+
+	HASH_FILE string = "./token.json"
 )
 
 type Sphincter struct {
@@ -55,8 +61,8 @@ func (s *Sphincter) connect() bool {
 
 }
 
-// listenAndReconnect listens for serial data and infinitly tries to reconnect
-func (s *Sphincter) listenAndReconnect(chn chan string) {
+// ListenAndReconnect listens for serial data and infinitly tries to reconnect
+func (s *Sphincter) ListenAndReconnect(chn chan string) {
 
 	go func(chn chan string) {
 
@@ -96,16 +102,55 @@ func (s *Sphincter) listenAndReconnect(chn chan string) {
 	}(chn)
 }
 
-func (s *Sphincter) performAction(action string) {
-
+func (s *Sphincter) PerformAction(action string) {
 	_, err := s.Write([]byte(action))
 	if err != nil {
+		// FIXME better error handling, not just call log.Fatal :/
 		log.Fatal(err)
 	}
+}
 
+type HashTable []struct {
+	Mail string
+	Hash string
+	Salt string
+}
+
+func (ht *HashTable) ReadHashFile(filename string) error {
+	content, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return err
+	}
+
+	if err = json.Unmarshal(content, ht); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ht *HashTable) Auth(token string) bool {
+	for _, entry := range *ht {
+		// compute salted hash from token
+		h256 := sha256.New()
+		io.WriteString(h256, token)
+		io.WriteString(h256, entry.Salt)
+		chash := hex.EncodeToString(h256.Sum(nil))
+
+		// check, if computed hash matches hash from table
+		if chash == entry.Hash {
+			return true
+		}
+	}
+	return false
 }
 
 func main() {
+
+	var ht HashTable
+	if err := ht.ReadHashFile(HASH_FILE); err != nil {
+		log.Fatal(err)
+	}
 
 	sphincter := Sphincter{
 		"/dev/pts/4",
@@ -115,26 +160,37 @@ func main() {
 	var httpRespQueue []chan string
 	serial_chn := make(chan string)
 
-	sphincter.listenAndReconnect(serial_chn)
+	sphincter.ListenAndReconnect(serial_chn)
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 
-		// TODO check auth
+		// FIXME set timeout for http request
 
 		if err := r.ParseForm(); err != nil {
+			// TODO err handling
 		}
 
 		switch r.Form.Get("action") {
-		case ACN_CLOSE, ACN_OPEN, ACN_STATE:
-			chn := make(chan string)
-			httpRespQueue = append(httpRespQueue, chn)
 
-			// wait for corresponding serial response
-			fmt.Fprint(w, <-chn)
+		case ACN_OPEN, ACN_CLOSE:
+			if !ht.Auth(r.Form.Get("token")) {
+				fmt.Fprint(w, "NOT ALLOWED")
+				return
+			}
+
+		case ACN_STATE:
+
 		default:
 			fmt.Fprint(w, "INVALID ACTION")
 			return
 		}
+
+		// TODO call sphincter
+		chn := make(chan string)
+		httpRespQueue = append(httpRespQueue, chn)
+
+		// wait for corresponding serial response
+		fmt.Fprint(w, <-chn)
 
 	})
 	go func() { http.ListenAndServe(":8080", nil) }()
@@ -150,4 +206,5 @@ func main() {
 			httpRespQueue = httpRespQueue[1:]
 		}
 	}
+
 }
