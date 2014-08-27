@@ -132,6 +132,7 @@ func (a *AuthWorker) ReadHashFile() error {
 	// check whether file was changed since last read
 	if !a.FileLastModified.Equal(info.ModTime()) {
 
+		log.Println("reading hash file \"" + a.HashFile + "\" ...")
 
 		content, err := ioutil.ReadFile(a.HashFile)
 		if err != nil {
@@ -164,9 +165,11 @@ func (a *AuthWorker) Auth(token string) bool {
 	// check if computed hash matches any hash from table
 	for _, entry := range a.HashTable {
 		if chash == entry.Hash {
+			log.Println("user authenticated: " + entry.Mail)
 			return true
 		}
 	}
+	log.Println("authentication denied for token: \"" + token + "\"")
 	return false
 }
 
@@ -230,6 +233,7 @@ func main() {
 		if len(httpRespQueue) > 0 {
 			httpRespQueue[0] <- serial_data
 			httpRespQueue = httpRespQueue[1:]
+		log.Println("got serial data: \"" + serial_data + "\"")
 		}
 	}
 
