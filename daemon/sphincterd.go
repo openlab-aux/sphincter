@@ -229,11 +229,23 @@ func main() {
 		// wait for serial data
 		serial_data := <-serial_chn
 
-		// check if there are waiting http connections
-		if len(httpRespQueue) > 0 {
-			httpRespQueue[0] <- serial_data
-			httpRespQueue = httpRespQueue[1:]
 		log.Println("got serial data: \"" + serial_data + "\"")
+
+		// TODO do stuff based on response (e.g. call spaceapi/beehive, ...)
+		switch serial_data {
+		case RSP_OPEN, RSP_LOCKED:
+			// check if there are waiting http connections, respond to the very
+			// first one in queue and remove it.
+			if len(httpRespQueue) > 0 {
+				httpRespQueue[0] <- serial_data
+				httpRespQueue = httpRespQueue[1:]
+				// FIXME let http handler remove chan based on the
+				// corresponding response from sphincter. Otherwise chans are
+				// removed too early or never because different GET request
+				// are waiting for different responses (RSP_OPEN, RSP_CLOSED,
+				// RSP_UNLOCKED). Other solution could be to not seperatly
+				// handle "OPEN" and "UNLOCKED"
+			}
 		}
 	}
 
