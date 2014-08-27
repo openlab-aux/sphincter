@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -34,9 +35,10 @@ const (
 	ACN_CLOSE string = "close"
 	ACN_STATE string = "state"
 
-	HASH_FILE string = "./token.json"
+	HASH_FILE string = "./hashes.json"
 )
 
+// Struct that handles sphincter connected via RS-232
 type Sphincter struct {
 	dev   string
 	speed int
@@ -58,7 +60,6 @@ func (s *Sphincter) connect() bool {
 		return false
 	}
 	return true
-
 }
 
 // ListenAndReconnect listens for serial data and infinitly tries to reconnect
@@ -87,6 +88,7 @@ func (s *Sphincter) ListenAndReconnect(chn chan string) {
 						break
 					}
 
+					// Read until line end
 					// lines returned from sphincter are terminated with "\r\n"
 					// see http://arduino.cc/en/Serial/Println
 					out += string(buf[:n])
@@ -182,7 +184,7 @@ func main() {
 	}
 
 	sphincter := Sphincter{
-		"/dev/pts/4",
+		"/dev/pts/2",
 		9600,
 		nil}
 
@@ -218,15 +220,15 @@ func main() {
 		chn := make(chan string)
 		httpRespQueue = append(httpRespQueue, chn)
 
-		// wait for corresponding serial response
+		// wait for 'corresponding' serial response and redirect it to the
+		// waiting HTTP client
 		fmt.Fprint(w, <-chn)
-
 	})
 	go func() { http.ListenAndServe(":8080", nil) }()
 
 	// daemon main loop
 	for {
-		// wait for serial data
+		// idle... wait for serial data
 		serial_data := <-serial_chn
 
 		log.Println("got serial data: \"" + serial_data + "\"")
@@ -247,6 +249,6 @@ func main() {
 				// handle "OPEN" and "UNLOCKED"
 			}
 		}
-	}
 
+	}
 }
