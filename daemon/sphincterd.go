@@ -110,34 +110,59 @@ func (s *Sphincter) PerformAction(action string) {
 	}
 }
 
-type HashTable []struct {
-	Mail string
-	Hash string
-	Salt string
+type AuthWorker struct {
+	HashFile         string
+	FileLastModified time.Time
+
+	Salt      string
+	HashTable []struct {
+		Mail string
+		Hash string
+	}
 }
 
-func (ht *HashTable) ReadHashFile(filename string) error {
-	content, err := ioutil.ReadFile(filename)
+// Read and parse hash file if it has changed since last read
+func (a *AuthWorker) ReadHashFile() error {
+
+	info, err := os.Stat(a.HashFile)
 	if err != nil {
 		return err
 	}
 
-	if err = json.Unmarshal(content, ht); err != nil {
-		return err
+	// check whether file was changed since last read
+	if !a.FileLastModified.Equal(info.ModTime()) {
+
+
+		content, err := ioutil.ReadFile(a.HashFile)
+		if err != nil {
+			return err
+		}
+
+		if err = json.Unmarshal(content, a); err != nil {
+			return err
+		}
+
+		a.FileLastModified = info.ModTime()
 	}
 
 	return nil
 }
 
-func (ht *HashTable) Auth(token string) bool {
-	for _, entry := range *ht {
-		// compute salted hash from token
-		h256 := sha256.New()
-		io.WriteString(h256, token)
-		io.WriteString(h256, entry.Salt)
-		chash := hex.EncodeToString(h256.Sum(nil))
+// Check authentication for a given token
+func (a *AuthWorker) Auth(token string) bool {
+	// update hashtable
+	if err := a.ReadHashFile(); err != nil {
+		log.Fatal(err)
+	}
 
-		// check, if computed hash matches hash from table
+	// compute salted hash from token
+	h256 := sha256.New()
+	io.WriteString(h256, token)
+	io.WriteString(h256, a.Salt)
+	chash := hex.EncodeToString(h256.Sum(nil))
+
+	// check if computed hash matches any hash from table
+	for _, entry := range a.HashTable {
 		if chash == entry.Hash {
 			return true
 		}
@@ -147,8 +172,9 @@ func (ht *HashTable) Auth(token string) bool {
 
 func main() {
 
-	var ht HashTable
-	if err := ht.ReadHashFile(HASH_FILE); err != nil {
+	var auth AuthWorker
+	auth.HashFile = HASH_FILE
+	if err := auth.ReadHashFile(); err != nil {
 		log.Fatal(err)
 	}
 
@@ -173,7 +199,7 @@ func main() {
 		switch r.Form.Get("action") {
 
 		case ACN_OPEN, ACN_CLOSE:
-			if !ht.Auth(r.Form.Get("token")) {
+			if !auth.Auth(r.Form.Get("token")) {
 				fmt.Fprint(w, "NOT ALLOWED")
 				return
 			}
