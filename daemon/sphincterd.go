@@ -118,8 +118,9 @@ type AuthWorker struct {
 
 	Salt      string
 	HashTable []struct {
-		Mail string
-		Hash string
+		Mail    string
+		Hash    string
+		Enabled bool
 	}
 }
 
@@ -166,7 +167,7 @@ func (a *AuthWorker) Auth(token string) bool {
 
 	// check if computed hash matches any hash from table
 	for _, entry := range a.HashTable {
-		if chash == entry.Hash {
+		if entry.Enabled && chash == entry.Hash {
 			log.Println("user authenticated: " + entry.Mail)
 			return true
 		}
