@@ -255,6 +255,7 @@ void processButtonEvents() {
     else if( !digitalRead(BUTTON_CLOSE) && close_was_pressed ) {
 
         close_was_pressed = false;
+        delay(1000*20) //20-second delay for leaving lab
         turnLock(LOCK_CLOSE);
 
     }
