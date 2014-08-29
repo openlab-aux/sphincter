@@ -186,56 +186,63 @@ func (a *AuthWorker) Auth(token string) bool {
 	return false
 }
 
+type HttpHandler struct {
+	sphincter    *Sphincter
+	auth         *AuthWorker
+	ResponseChan chan string
+}
+
+func (h HttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+
+	if err := r.ParseForm(); err != nil {
+		log.Println(err)
+	}
+	action := r.Form.Get("action")
+	token := r.Form.Get("token")
+
+	// need auth
+	if (action == ACN_OPEN || action == ACN_CLOSE) && !h.auth.Auth(token) {
+		fmt.Fprint(w, "NOT ALLOWED")
+		return
+	}
+
+	var err error
+
+
+	if err != nil {
+		log.Println(err)
+		fmt.Fprintf(w, "FAILED TO CALL SPHINCTER")
+		return
+	}
+
+
+
 func main() {
 
+	// init AuthWorker and force a file read
 	var auth AuthWorker
 	auth.HashFile = HASH_FILE
 	if err := auth.ReadHashFile(); err != nil {
 		log.Fatal(err)
 	}
 
+		// TODO call sphincter
+	// init spincter and listen on serial
 	sphincter := Sphincter{
-		"/dev/pts/2",
-		9600,
-		nil}
-
-	var httpRespQueue []chan string
+		dev:   "/dev/pts/6",
+		speed: 9600,
+	}
 	serial_chn := make(chan string)
-
 	sphincter.ListenAndReconnect(serial_chn)
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-
-		// FIXME set timeout for http request
-
-		if err := r.ParseForm(); err != nil {
-			// TODO err handling
-		}
-
-		switch r.Form.Get("action") {
-
-		case ACN_OPEN, ACN_CLOSE:
-			if !auth.Auth(r.Form.Get("token")) {
-				fmt.Fprint(w, "NOT ALLOWED")
-				return
-			}
-
-		case ACN_STATE:
-
-		default:
-			fmt.Fprint(w, "INVALID ACTION")
-			return
-		}
-
-		// TODO call sphincter
-		chn := make(chan string)
-		httpRespQueue = append(httpRespQueue, chn)
-
-		// wait for 'corresponding' serial response and redirect it to the
-		// waiting HTTP client
-		fmt.Fprint(w, <-chn)
-	})
-	go func() { http.ListenAndServe(":8080", nil) }()
+	// init and start the web server
+	httpResponseChan := make(chan string)
+	getHandler := HttpHandler{
+		ResponseChan: httpResponseChan,
+		auth:         &auth,
+		sphincter:    &sphincter,
+	}
+	go func() { http.ListenAndServe(":8081", getHandler) }()
 
 	// daemon main loop
 	for {
@@ -245,19 +252,7 @@ func main() {
 		// TODO do stuff based on response (e.g. call spaceapi/beehive, ...)
 		switch serial_data {
 		case RSP_OPEN, RSP_LOCKED:
-			// check if there are waiting http connections, respond to the very
-			// first one in queue and remove it.
-			if len(httpRespQueue) > 0 {
-				httpRespQueue[0] <- serial_data
-				httpRespQueue = httpRespQueue[1:]
-				// FIXME let http handler remove chan based on the
-				// corresponding response from sphincter. Otherwise chans are
-				// removed too early or never because different GET request
-				// are waiting for different responses (RSP_OPEN, RSP_CLOSED,
-				// RSP_UNLOCKED). Other solution could be to not seperatly
-				// handle "OPEN" and "UNLOCKED"
-			}
+			httpResponseChan <- serial_data
 		}
-
 	}
 }
