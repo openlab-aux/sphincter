@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -107,12 +108,15 @@ func (s *Sphincter) ListenAndReconnect(chn chan string) {
 	}(chn)
 }
 
-	_, err := s.Write([]byte(action))
 func (s *Sphincter) SendRequest(rq string) error {
-	if err != nil {
-		// FIXME better error handling, not just call log.Fatal :/
-		log.Fatal(err)
+	if s.ReadWriteCloser == nil {
+		return errors.New("write " + s.dev + ": serial connection closed")
 	}
+	_, err := s.Write([]byte(rq))
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 type AuthWorker struct {
