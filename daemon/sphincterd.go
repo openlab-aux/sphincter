@@ -272,9 +272,15 @@ func main() {
 		serial_data := <-serial_chn
 
 		// TODO do stuff based on response (e.g. call spaceapi/beehive, ...)
+		if serial_data == RSP_LOCKED ||
+			serial_data == RSP_OPEN {
+			// select statement for nonblocking write
+			select {
+			case httpResponseChan <- serial_data:
+			default:
+			}
+		}
 		switch serial_data {
-		case RSP_OPEN, RSP_LOCKED:
-			httpResponseChan <- serial_data
 		}
 	}
 }
