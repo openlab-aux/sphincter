@@ -74,10 +74,13 @@ func (s *Sphincter) ListenAndReconnect(chn chan string) {
 
 		// loop for reconnecting
 		for {
+
+			if s.ReadWriteCloser != nil {
+				s.Close()
+			}
+
 			if s.connect() {
 				defer s.Close()
-
-				// FIXME: flush buffer
 
 				// listen for data
 				for {
