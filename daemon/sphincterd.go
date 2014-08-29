@@ -215,7 +215,18 @@ func (h HttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	closeNotifier := w.(http.CloseNotifier).CloseNotify()
 
+	select {
+	case <-closeNotifier:
+		// lost connection
+		log.Println("lost HTTP connection")
+		return
+	case resp := <-h.ResponseChan:
+		// got the response from sphincter
+		fmt.Fprintf(w, resp)
+	}
+}
 
 func main() {
 
