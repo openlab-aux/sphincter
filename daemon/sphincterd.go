@@ -76,7 +76,7 @@ func (s *Sphincter) ListenAndReconnect(chn chan string) {
 
 		// loop for reconnecting
 		for {
-
+			// close port to be able to reopen it
 			if s.ReadWriteCloser != nil {
 				s.Close()
 			}
@@ -111,10 +111,11 @@ func (s *Sphincter) ListenAndReconnect(chn chan string) {
 	}(chn)
 }
 
+// Send requests to sphincter
 func (s *Sphincter) SendRequest(rq string) error {
 	log.Println("sending serial data: \"" + rq + "\"")
 	if s.ReadWriteCloser == nil {
-		return errors.New("write " + s.dev + ": serial connection closed")
+		return errors.New("write " + s.dev + ": no serial connection established")
 	}
 	_, err := s.Write([]byte(rq))
 	if err != nil {
@@ -243,8 +244,7 @@ func (h HttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func main() {
 
 	// init AuthWorker and force a file read
-	var auth AuthWorker
-	auth.HashFile = HASH_FILE
+	auth := AuthWorker{HashFile: HASH_FILE}
 	if err := auth.ReadHashFile(); err != nil {
 		log.Fatal(err)
 	}
