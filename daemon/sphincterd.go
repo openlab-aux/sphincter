@@ -98,8 +98,9 @@ func (s *Sphincter) ListenAndReconnect(chn chan string) {
 					// see http://arduino.cc/en/Serial/Println
 					out += string(buf[:n])
 					if n > 0 && buf[n-1] == '\n' {
-						chn <- strings.Trim(out, "\r\n")
+						sd := strings.Trim(out, "\r\n")
 						out = ""
+						chn <- sd
 						log.Println("got serial data: \"" + sd + "\"")
 					}
 				}
