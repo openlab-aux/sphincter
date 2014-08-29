@@ -60,6 +60,7 @@ func (s *Sphincter) connect() bool {
 		log.Println(err)
 		return false
 	}
+	log.Println("connected to sphincter on port " + s.dev)
 	return true
 }
 
@@ -99,6 +100,7 @@ func (s *Sphincter) ListenAndReconnect(chn chan string) {
 					if n > 0 && buf[n-1] == '\n' {
 						chn <- strings.Trim(out, "\r\n")
 						out = ""
+						log.Println("got serial data: \"" + sd + "\"")
 					}
 				}
 			}
@@ -109,6 +111,7 @@ func (s *Sphincter) ListenAndReconnect(chn chan string) {
 }
 
 func (s *Sphincter) SendRequest(rq string) error {
+	log.Println("sending serial data: \"" + rq + "\"")
 	if s.ReadWriteCloser == nil {
 		return errors.New("write " + s.dev + ": serial connection closed")
 	}
@@ -238,8 +241,6 @@ func main() {
 	for {
 		// idle... wait for serial data
 		serial_data := <-serial_chn
-
-		log.Println("got serial data: \"" + serial_data + "\"")
 
 		// TODO do stuff based on response (e.g. call spaceapi/beehive, ...)
 		switch serial_data {
