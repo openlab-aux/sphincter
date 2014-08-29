@@ -271,7 +271,6 @@ func main() {
 		// idle... wait for serial data
 		serial_data := <-serial_chn
 
-		// TODO do stuff based on response (e.g. call spaceapi/beehive, ...)
 		if serial_data == RSP_LOCKED ||
 			serial_data == RSP_OPEN {
 			// select statement for nonblocking write
@@ -280,7 +279,28 @@ func main() {
 			default:
 			}
 		}
+
 		switch serial_data {
+		case RSP_LOCKED:
+			simpleAPICall("http://api.openlab-augsburg.de/spacecgi.py?update_device_count=0&token=")
+		case RSP_UNLOCKED:
+			simpleAPICall("http://api.openlab-augsburg.de/spacecgi.py?update_device_count=1&token=")
+		case RSP_OPEN:
+		case RSP_UNKNOWN:
 		}
+
 	}
+}
+
+// a simple, non blocking API caller func
+func simpleAPICall(url string) {
+	go func(url string) {
+		resp, err := http.Get(url)
+		if err != nil {
+			log.Println(err)
+		}
+		if resp != nil {
+			defer resp.Body.Close()
+		}
+	}(url)
 }
