@@ -107,8 +107,8 @@ func (s *Sphincter) ListenAndReconnect(chn chan string) {
 	}(chn)
 }
 
-func (s *Sphincter) PerformAction(action string) {
 	_, err := s.Write([]byte(action))
+func (s *Sphincter) SendRequest(rq string) error {
 	if err != nil {
 		// FIXME better error handling, not just call log.Fatal :/
 		log.Fatal(err)
@@ -138,7 +138,7 @@ func (a *AuthWorker) ReadHashFile() error {
 	// check whether file was changed since last read
 	if !a.FileLastModified.Equal(info.ModTime()) {
 
-		log.Println("reading hash file \"" + a.HashFile + "\" ...")
+		log.Println("reading hash file " + a.HashFile + " ...")
 
 		content, err := ioutil.ReadFile(a.HashFile)
 		if err != nil {
