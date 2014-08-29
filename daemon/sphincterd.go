@@ -208,6 +208,17 @@ func (h HttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 
+	switch action {
+	case ACN_OPEN:
+		err = h.sphincter.SendRequest(CMD_OPEN)
+	case ACN_CLOSE:
+		err = h.sphincter.SendRequest(CMD_CLOSE)
+	case ACN_STATE:
+		err = h.sphincter.SendRequest(CMD_STATE)
+	default:
+		fmt.Fprint(w, "INVALID ACTION")
+		return
+	}
 
 	if err != nil {
 		log.Println(err)
@@ -237,7 +248,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-		// TODO call sphincter
 	// init spincter and listen on serial
 	sphincter := Sphincter{
 		dev:   "/dev/pts/6",
