@@ -1,3 +1,5 @@
+#include <TimerOne.h>
+
 // motor driver pins
 #define OPEN  3
 #define CLOSE 2
