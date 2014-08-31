@@ -88,7 +88,7 @@ func (s *Sphincter) ListenAndReconnect(chn chan string) {
 				for {
 					n, err = s.Read(buf)
 
-					if err != nil {
+					if err != nil && err != io.EOF {
 						log.Println(err)
 						break
 					}
