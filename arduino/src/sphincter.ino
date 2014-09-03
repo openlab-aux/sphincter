@@ -32,7 +32,13 @@
 #define BUTTON_CLOSE 6
 #define BUTTON_OPEN  7
 
-// ToDo:
+#define BUTTONS_PRESSED_NONE  0
+#define BUTTONS_PRESSED_OPEN  1
+#define BUTTONS_PRESSED_CLOSE 2
+#define BUTTONS_PRESSED_BOTH  3
+
+
+// TODO
 // Timeout for a field change in rotary encoder
 // = maximum time between two fields
 // needs to be speed independent
@@ -229,42 +235,102 @@ void turnLock(int new_position) {
 
 }
 
-
-
+    
 void processButtonEvents() {
 
-    static boolean open_was_pressed = false;
-    static boolean close_was_pressed = false;
+    static unsigned int lp_count_open;
+    static unsigned int lp_count_close;
+    static unsigned int lp_count_both;
 
-    if( digitalRead(BUTTON_OPEN) && digitalRead(BUTTON_CLOSE) ) {
+    // 00 = 0: no button pressed
+    // 01 = 1: open button pressed
+    // 10 = 2: close button pressed
+    // 11 = 3: both buttons are pressed
+    byte button_bitmask;
+    
+    if( digitalRead(BUTTON_OPEN) || digitalRead(BUTTON_CLOSE) ) {
 
-        referenceRun();
-        // as in most cases one button gets pressed first,
-        // one of the variables is set to true
-        open_was_pressed = false;
-        close_was_pressed = false;
+        do {
+
+            // generate bitmask
+            button_bitmask = (digitalRead(BUTTON_OPEN)  ? 1 : 0)
+                           | (digitalRead(BUTTON_CLOSE) ? 2 : 0);
+
+            switch( button_bitmask ) {
+                case BUTTONS_PRESSED_OPEN:
+                    lp_count_open ++;
+                    lp_count_close = lp_count_both = 0;
+                    break;
+
+                case BUTTONS_PRESSED_CLOSE:
+                    lp_count_close ++;
+                    lp_count_open = lp_count_both = 0;
+
+                    switch( lp_count_close ) {
+                        case 1000:                              
+                            toggleLEDs(true, false, false);
+                            break;
+
+                        case 2000:
+                            toggleLEDs(true, true, false);
+                            break;
+
+                        case 3000:
+                            toggleLEDs(true, true, true);
+                            break;
+
+                        case 4000:
+                            for(int i=0; i<30; i++) {
+                                toggleLEDs(false, false, false);
+                                delay(500 - pow(2, (8.8/30)*i));
+                                toggleLEDs(true, true, true);
+                                delay(50);
+                            }
+                            for(int i=0; i<10; i++) {
+                                toggleLEDs(false, false, false);
+                                delay(50);
+                                toggleLEDs(true, true, true);
+                                delay(50);
+                            }
+                            toggleLEDs(false, false, false);
+                            turnLock(LOCK_CLOSE);
+                            lp_count_close = 0;
+                            break;
+                    }
+                    break;
+
+                case BUTTONS_PRESSED_BOTH:
+                    lp_count_both ++;
+                    lp_count_open = lp_count_close = 0;
+
+                    if( lp_count_both == 1000 ) {
+                        referenceRun();
+                    }
+                    break;
+            }
+
+            delay(1);
+        } while( button_bitmask != BUTTONS_PRESSED_NONE );
+
+        // here comes the "on button up" stuff
+        if( lp_count_open > 10 ) {
+            turnLock(DOOR_OPEN);
+        }
+        if( lp_count_close > 10 ) {
+            if(lp_count_close < 1000) {
+                turnLock(LOCK_CLOSE);
+            }
+            else {
+                // reset LEDs
+                stateChanged();
+            }
+        }
+
+        lp_count_both = lp_count_open = lp_count_close = 0;
 
     }
-    else if( digitalRead(BUTTON_OPEN ) ) {
-        open_was_pressed = true;
-    }
-    else if( digitalRead(BUTTON_CLOSE) ) {
-        close_was_pressed = true;
-    }
-    else if( !digitalRead(BUTTON_OPEN) && open_was_pressed ) {
-
-        open_was_pressed = false;
-        turnLock(DOOR_OPEN);
-
-    }
-    else if( !digitalRead(BUTTON_CLOSE) && close_was_pressed ) {
-
-        close_was_pressed = false;
-        turnLock(LOCK_CLOSE);
-
-    }
-
 }
+
 
 
 void processSerialEvents() {
