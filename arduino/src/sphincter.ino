@@ -41,29 +41,34 @@
 int position;
 
 
+void toggleLEDs(bool r, bool y, bool g) {
+
+    digitalWrite(LED_R, r ? HIGH : LOW);
+    digitalWrite(LED_Y, y ? HIGH : LOW);
+    digitalWrite(LED_G, g ? HIGH : LOW);
+
+}
+
+
 void stateChanged() {
 
     // the state of sphincter has changed. Update LEDs
     // and submit state over serial connection
 
-    digitalWrite(LED_R, LOW);
-    digitalWrite(LED_Y, LOW);
-    digitalWrite(LED_G, LOW);
-
     switch(position) {
 
         case LOCK_CLOSE:
-            digitalWrite(LED_R, HIGH);
+            toggleLEDs(true, false, false);
             Serial.println("LOCKED");
             break;
 
         case LOCK_OPEN:
-            digitalWrite(LED_Y, HIGH);
+            toggleLEDs(false, true, false);
             Serial.println("UNLOCKED");
             break;
 
         case DOOR_OPEN:
-            digitalWrite(LED_G, HIGH);
+            toggleLEDs(false, false, true);
             Serial.println("OPEN");
             break;
 
@@ -83,9 +88,7 @@ void referenceRun() {
     int counter = 0;
     boolean was_interrupted = false;
 
-    digitalWrite(LED_R, HIGH);
-    digitalWrite(LED_Y, HIGH);
-    digitalWrite(LED_G, HIGH);
+    toggleLEDs(true, true, true);
 
     analogWrite(PWM, REF);     // speed (PWM)
     digitalWrite(CLOSE, HIGH);  // start motor
