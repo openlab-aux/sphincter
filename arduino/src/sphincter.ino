@@ -1,17 +1,17 @@
 #include <TimerOne.h>
 
 // motor driver pins
-#define OPEN  3
-#define CLOSE 2
-#define PWM   5
+#define PIN_OPEN  3
+#define PIN_CLOSE 2
+#define PIN_PWM   5
 
 // photo sensor pin
-#define PHOTOSENS  8
+#define PIN_PHOTO  8
 
-// motor speed 0-255 (PWM)
-#define FAST 255
-#define SLOW  80
-#define REF   70
+// motor speed 0-255 (PIN_PWM)
+#define SPEED_FAST 255
+#define SPEED_SLOW  80
+#define SPEED_REF   70
 
 // lock positions (rotary encoder steps)
 #define LOCK_CLOSE  0
@@ -90,8 +90,8 @@ void referenceRun() {
 
     toggleLEDs(true, true, true);
 
-    analogWrite(PWM, REF);     // speed (PWM)
-    digitalWrite(CLOSE, HIGH);  // start motor
+    analogWrite(PIN_PWM, SPEED_REF); // speed (PWM)
+    digitalWrite(PIN_CLOSE, HIGH);   // start motor
 
     do {
 
@@ -99,8 +99,8 @@ void referenceRun() {
 
         // if nothing changes disc got stuck
         // means that the lock is at its minimum position
-        if( (!digitalRead(PHOTOSENS) && !was_interrupted)
-         || (digitalRead(PHOTOSENS) && was_interrupted) ) {
+        if( (!digitalRead(PIN_PHOTO) && !was_interrupted)
+         || (digitalRead(PIN_PHOTO) && was_interrupted) ) {
 
             counter = 0;
             was_interrupted = !was_interrupted;
@@ -111,19 +111,19 @@ void referenceRun() {
 
     } while( counter < 50 );
 
-    digitalWrite(CLOSE, LOW);   // stop motor
+    digitalWrite(PIN_CLOSE, LOW);   // stop motor
 
     delay(PS_DELAY);
 
     // if the rotary encoder is interrupted
     // turn back until there is no field in between and than
     // turn one field further (= position 0)
-    digitalWrite(PWM, FAST);
-    digitalWrite(OPEN, HIGH);
-    while( !digitalRead(PHOTOSENS) );
+    digitalWrite(PIN_PWM, SPEED_FAST);
+    digitalWrite(PIN_OPEN, HIGH);
+    while( !digitalRead(PIN_PHOTO) );
     delay(PS_DELAY);
-    while( digitalRead(PHOTOSENS) );
-    digitalWrite(OPEN, LOW);
+    while( digitalRead(PIN_PHOTO) );
+    digitalWrite(PIN_OPEN, LOW);
 
     position = 0;
     stateChanged();
@@ -141,20 +141,20 @@ void turnLock(int new_position) {
     int direction;
     boolean was_interrupted = false;
 
-    analogWrite(PWM, FAST);  // set speed
+    analogWrite(PIN_PWM, SPEED_FAST);  // set speed
 
     // open lock
     if( new_position > position ) {
 
         step =  1;           // increment position
-        direction = OPEN;
+        direction = PIN_OPEN;
 
     }
     // close lock
     else if( new_position < position ) {
 
         step = -1;           // decrement position
-        direction = CLOSE;
+        direction = PIN_CLOSE;
 
     }
 
@@ -162,21 +162,21 @@ void turnLock(int new_position) {
     digitalWrite(direction, HIGH);  // motor power on
 
     // wait for photo sensor to become free
-    while( !digitalRead(PHOTOSENS) );
+    while( !digitalRead(PIN_PHOTO) );
 
     delay(PS_DELAY);
 
     while(true) {
 
         // photo sensor becomes interrupted
-        if( !digitalRead(PHOTOSENS) && !was_interrupted ) {
+        if( !digitalRead(PIN_PHOTO) && !was_interrupted ) {
 
             position += step;
             was_interrupted = true;
 
         }
         // photo sensor becomes free
-        else if( digitalRead(PHOTOSENS) && was_interrupted ) {
+        else if( digitalRead(PIN_PHOTO) && was_interrupted ) {
 
             was_interrupted = false;
 
@@ -190,10 +190,10 @@ void turnLock(int new_position) {
         }
 
         if( (new_position == LOCK_CLOSE) && position > LOCK_CLOSE + 3) {
-            analogWrite(PWM, SLOW);
+            analogWrite(PIN_PWM, SPEED_SLOW);
         }
         else {
-            analogWrite(PWM, FAST);
+            analogWrite(PIN_PWM, SPEED_FAST);
         }
 
     }
@@ -203,18 +203,18 @@ void turnLock(int new_position) {
     delay(PS_DELAY);
 
     // if necessary turn back to correct position
-    if( direction == OPEN ) {
+    if( direction == PIN_OPEN ) {
 
-        digitalWrite(CLOSE, HIGH);
-        while( digitalRead(PHOTOSENS) );
-        digitalWrite(CLOSE, LOW);
+        digitalWrite(PIN_CLOSE, HIGH);
+        while( digitalRead(PIN_PHOTO) );
+        digitalWrite(PIN_CLOSE, LOW);
 
     }
-    else if( direction == CLOSE ) {
+    else if( direction == PIN_CLOSE ) {
 
-        digitalWrite(OPEN, HIGH);
-        while( digitalRead(PHOTOSENS) );
-        digitalWrite(OPEN, LOW);
+        digitalWrite(PIN_OPEN, HIGH);
+        while( digitalRead(PIN_PHOTO) );
+        digitalWrite(PIN_OPEN, LOW);
 
     }
 
@@ -301,15 +301,20 @@ void processSerialEvents() {
 }
 
 
+
 void setup()  {
 
+    // initialize timer interrupt with 10ms period
+    //Timer1.initialize(10000);
+    //Timer1.attachInterrupt(processTimerInterrup);
+
     // initialize pins
-    pinMode(LED_R, OUTPUT);
-    pinMode(LED_Y, OUTPUT);
-    pinMode(LED_G, OUTPUT);
-    pinMode(OPEN,  OUTPUT);
-    pinMode(CLOSE, OUTPUT);
-    pinMode(PHOTOSENS, INPUT);
+    pinMode(LED_R,     OUTPUT);
+    pinMode(LED_Y,     OUTPUT);
+    pinMode(LED_G,     OUTPUT);
+    pinMode(PIN_OPEN,  OUTPUT);
+    pinMode(PIN_CLOSE, OUTPUT);
+    pinMode(PIN_PHOTO, INPUT);
 
     // initialize serial
     Serial.begin(9600);
