@@ -4,6 +4,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -20,8 +22,6 @@ const (
 	ACN_OPEN  = "open"
 	ACN_CLOSE = "close"
 	ACN_STATE = "state"
-
-	HASH_FILE = "./hashes.json"
 )
 
 // AuthWorker handles authentication through tokens.
@@ -136,17 +136,29 @@ func (h HttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 
+	port := flag.String("port", "", "serial port")
+	speed := flag.Int("speed", 9600, "serial speed (baud)")
+	hashfile := flag.String("hashfile", "", "file were the token hashes are stored")
+	bind := flag.String("bind", ":8080", "[host]:port to bind the HTTP server to")
+
+	flag.Parse()
+
+	if *hashfile == "" {
+		log.Fatal(errors.New("no hash file given."))
+	}
+
+	if *port == "" {
+		log.Fatal(errors.New("no serial port given."))
+	}
+
 	// init AuthWorker and force a file read
-	auth := AuthWorker{HashFile: HASH_FILE}
+	auth := AuthWorker{HashFile: *hashfile}
 	if err := auth.ReadHashFile(); err != nil {
 		log.Fatal(err)
 	}
 
 	// init spincter and listen on serial
-	sph := sphincter.New(
-		"/dev/pts/6",
-		9600,
-	)
+	sph := sphincter.New(*port, *speed)
 	sphincterResponses := make(chan string)
 	sph.ListenAndReconnect(sphincterResponses)
 
@@ -155,7 +167,7 @@ func main() {
 		auth:      &auth,
 		sphincter: sph,
 	}
-	go func() { http.ListenAndServe(":8081", getHandler) }()
+	go func() { log.Fatal(http.ListenAndServe(*bind, getHandler)) }()
 
 	// daemon main loop
 	for {
