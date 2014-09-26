@@ -37,7 +37,8 @@ type AuthWorker struct {
 	}
 }
 
-// Read and parse hash file if it has changed since last read
+// ReadHashFile updates the cached hashes if the token hashfile was changed
+// since the last access
 func (a *AuthWorker) ReadHashFile() error {
 
 	info, err := os.Stat(a.HashFile)
@@ -48,7 +49,7 @@ func (a *AuthWorker) ReadHashFile() error {
 	// check whether file was changed since last read
 	if !a.FileLastModified.Equal(info.ModTime()) {
 
-		log.Println("reading hash file " + a.HashFile + " ...")
+		log.Println("[auth worker] reading hash file " + a.HashFile + " ...")
 
 		content, err := ioutil.ReadFile(a.HashFile)
 		if err != nil {
@@ -65,7 +66,7 @@ func (a *AuthWorker) ReadHashFile() error {
 	return nil
 }
 
-// Check authentication for a given token
+// Auth returns whether a given token matches any hash.
 func (a *AuthWorker) Auth(token string) bool {
 	// update hashtable
 	if err := a.ReadHashFile(); err != nil {
@@ -81,18 +82,17 @@ func (a *AuthWorker) Auth(token string) bool {
 	// check if computed hash matches any hash from table
 	for _, entry := range a.HashTable {
 		if entry.Enabled && chash == entry.Hash {
-			log.Println("user authenticated: " + entry.Mail)
+			log.Println("[auth worker] user authenticated: " + entry.Mail)
 			return true
 		}
 	}
-	log.Println("authentication denied for token: \"" + token + "\"")
+	log.Println("[auth worker] authentication denied for token: \"" + token + "\"")
 	return false
 }
 
 type HttpHandler struct {
-	sphincter    *Sphincter
-	auth         *AuthWorker
-	ResponseChan chan string
+	sphincter *sphincter.Sphincter
+	auth      *AuthWorker
 }
 
 func (h HttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -110,14 +110,16 @@ func (h HttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var err error
+	var rsp string
 
 	switch action {
 	case ACN_OPEN:
-		err = h.sphincter.SendRequest(CMD_OPEN)
+		rsp, err = h.sphincter.Open()
 	case ACN_CLOSE:
-		err = h.sphincter.SendRequest(CMD_CLOSE)
+		rsp, err = h.sphincter.Close()
 	case ACN_STATE:
-		err = h.sphincter.SendRequest(CMD_STATE)
+		fmt.Fprintf(w, h.sphincter.State())
+		return
 	default:
 		fmt.Fprint(w, "INVALID ACTION")
 		return
@@ -129,22 +131,7 @@ func (h HttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	closeNotifier := w.(http.CloseNotifier).CloseNotify()
-
-	select {
-
-	case <-closeNotifier:
-		// lost connection
-		log.Println("lost HTTP connection")
-		// keep listening on chan
-		go func() {
-			<-h.ResponseChan
-		}()
-		return
-	case resp := <-h.ResponseChan:
-		// got the response from sphincter
-		fmt.Fprintf(w, resp)
-	}
+	fmt.Fprintf(w, rsp)
 }
 
 func main() {
@@ -156,45 +143,29 @@ func main() {
 	}
 
 	// init spincter and listen on serial
-	sphincter := Sphincter{
-		dev:   "/dev/pts/6",
-		speed: 9600,
-	}
-	serial_chn := make(chan string)
-	sphincter.ListenAndReconnect(serial_chn)
+	sph := sphincter.New(
+		"/dev/pts/6",
+		9600,
+	)
+	sphincterResponses := make(chan string)
+	sph.ListenAndReconnect(sphincterResponses)
 
 	// init and start the web server
-	httpResponseChan := make(chan string)
 	getHandler := HttpHandler{
-		ResponseChan: httpResponseChan,
-		auth:         &auth,
-		sphincter:    &sphincter,
+		auth:      &auth,
+		sphincter: sph,
 	}
 	go func() { http.ListenAndServe(":8081", getHandler) }()
 
 	// daemon main loop
 	for {
 		// idle... wait for serial data
-		serial_data := <-serial_chn
+		data := <-sphincterResponses
 
-		if serial_data == RSP_LOCKED ||
-			serial_data == RSP_OPEN {
-			// select statement for nonblocking write
-			select {
-			case httpResponseChan <- serial_data:
-			default:
-			}
+		switch data {
+		case sphincter.STATE_OPEN:
+		case sphincter.STATE_LOCKED:
 		}
-
-		switch serial_data {
-		case RSP_LOCKED:
-			simpleAPICall("http://api.openlab-augsburg.de/spacecgi.py?update_device_count=0&token=")
-		case RSP_UNLOCKED:
-			simpleAPICall("http://api.openlab-augsburg.de/spacecgi.py?update_device_count=1&token=")
-		case RSP_OPEN:
-		case RSP_UNKNOWN:
-		}
-
 	}
 }
 
