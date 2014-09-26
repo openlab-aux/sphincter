@@ -4,126 +4,27 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
-	"github.com/tarm/goserial"
+	"./sphincter"
 )
 
 const (
-	// Commands for sphincter
-	CMD_OPEN  string = "o"
-	CMD_CLOSE string = "c"
-	CMD_STATE string = "s"
-	CMD_REF   string = "r"
-
-	// Response codes from sphincter
-	RSP_OPEN     string = "OPEN"
-	RSP_UNLOCKED string = "UNLOCKED"
-	RSP_LOCKED   string = "LOCKED"
-	RSP_UNKNOWN  string = "UNKNOWN"
-	RSP_ACK      string = "ACK"
-
 	// Http GET actions
-	ACN_OPEN  string = "open"
-	ACN_CLOSE string = "close"
-	ACN_STATE string = "state"
+	ACN_OPEN  = "open"
+	ACN_CLOSE = "close"
+	ACN_STATE = "state"
 
-	HASH_FILE string = "./hashes.json"
+	HASH_FILE = "./hashes.json"
 )
 
-// Struct that handles sphincter connected via RS-232
-type Sphincter struct {
-	dev   string
-	speed int
-
-	io.ReadWriteCloser
-}
-
-// connect to sphincter
-func (s *Sphincter) connect() bool {
-
-	var err error
-
-	s.ReadWriteCloser, err = serial.OpenPort(&serial.Config{
-		Name: s.dev,
-		Baud: s.speed})
-
-	if err != nil {
-		log.Println(err)
-		return false
-	}
-	log.Println("connected to sphincter on port " + s.dev)
-	return true
-}
-
-// ListenAndReconnect listens for serial data and infinitly tries to reconnect
-func (s *Sphincter) ListenAndReconnect(chn chan string) {
-
-	go func(chn chan string) {
-
-		var err error
-		var n int
-		var out string
-		buf := make([]byte, 128)
-
-		// loop for reconnecting
-		for {
-			// close port to be able to reopen it
-			if s.ReadWriteCloser != nil {
-				s.Close()
-			}
-
-			if s.connect() {
-				defer s.Close()
-
-				// listen for data
-				for {
-					n, err = s.Read(buf)
-
-					if err != nil && err != io.EOF {
-						log.Println(err)
-						break
-					}
-
-					// Read until line end
-					// lines returned from sphincter are terminated with "\r\n"
-					// see http://arduino.cc/en/Serial/Println
-					out += string(buf[:n])
-					if n > 0 && buf[n-1] == '\n' {
-						sd := strings.Trim(out, "\r\n")
-						out = ""
-						chn <- sd
-						log.Println("got serial data: \"" + sd + "\"")
-					}
-				}
-			}
-			time.Sleep(5 * time.Second)
-			log.Println("reconnecting...")
-		}
-	}(chn)
-}
-
-// Send requests to sphincter
-func (s *Sphincter) SendRequest(rq string) error {
-	log.Println("sending serial data: \"" + rq + "\"")
-	if s.ReadWriteCloser == nil {
-		return errors.New("write " + s.dev + ": no serial connection established")
-	}
-	_, err := s.Write([]byte(rq))
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
+// AuthWorker handles authentication through tokens.
 type AuthWorker struct {
 	HashFile         string
 	FileLastModified time.Time
