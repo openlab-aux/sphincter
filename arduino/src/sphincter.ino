@@ -38,7 +38,14 @@
 #define BUTTONS_PRESSED_BOTH  3
 
 
-// TODO
+// Serial responses
+#define RESPONSE_LOCKED   "LOCKED"
+#define RESPONSE_UNLOCKED "UNLOCKED"
+#define RESPONSE_OPEN     "OPEN"
+#define RESPONSE_UNKNOWN  "UNKNOWN"
+#define RESPONSE_BUSY     "BUSY"
+
+// TODO:
 // Timeout for a field change in rotary encoder
 // = maximum time between two fields
 // needs to be speed independent
@@ -65,21 +72,20 @@ void stateChanged() {
 
         case LOCK_CLOSE:
             toggleLEDs(true, false, false);
-            Serial.println("LOCKED");
+            Serial.println(RESPONSE_LOCKED);
             break;
 
         case LOCK_OPEN:
             toggleLEDs(false, true, false);
-            Serial.println("UNLOCKED");
             break;
 
         case DOOR_OPEN:
             toggleLEDs(false, false, true);
-            Serial.println("OPEN");
+            Serial.println(RESPONSE_OPEN);
             break;
 
         default:
-            Serial.println("NO KNOWN STATE");
+            Serial.println(RESPONSE_UNKNOWN);
             break;
     }
 
@@ -90,6 +96,8 @@ void referenceRun() {
 
     // turns the lock in closing direction until it blocks
     // to figure out its minimum position
+
+    Serial.println(RESPONSE_BUSY);
 
     int counter = 0;
     boolean was_interrupted = false;
@@ -142,6 +150,8 @@ void turnLock(int new_position) {
     if( new_position == position
        || new_position < LOCK_CLOSE
        || new_position > DOOR_OPEN ) return;
+
+    Serial.println(RESPONSE_BUSY);
 
     int step;
     int direction;
@@ -235,7 +245,7 @@ void turnLock(int new_position) {
 
 }
 
-    
+
 void processButtonEvents() {
 
     static unsigned int lp_count_open;
@@ -247,7 +257,7 @@ void processButtonEvents() {
     // 10 = 2: close button pressed
     // 11 = 3: both buttons are pressed
     byte button_bitmask;
-    
+
     if( digitalRead(BUTTON_OPEN) || digitalRead(BUTTON_CLOSE) ) {
 
         do {
@@ -267,7 +277,7 @@ void processButtonEvents() {
                     lp_count_open = lp_count_both = 0;
 
                     switch( lp_count_close ) {
-                        case 1000:                              
+                        case 1000:
                             toggleLEDs(true, false, false);
                             break;
 
@@ -358,9 +368,8 @@ void processSerialEvents() {
 
             case 's':
               stateChanged();
-
-            default:
               break;
+
         }
     }
 
@@ -369,10 +378,6 @@ void processSerialEvents() {
 
 
 void setup()  {
-
-    // initialize timer interrupt with 10ms period
-    //Timer1.initialize(10000);
-    //Timer1.attachInterrupt(processTimerInterrup);
 
     // initialize pins
     pinMode(LED_R,     OUTPUT);
