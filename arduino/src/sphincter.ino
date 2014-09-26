@@ -34,8 +34,8 @@
 #define RESPONSE_LOCKED   "LOCKED"
 #define RESPONSE_UNLOCKED "UNLOCKED"
 #define RESPONSE_OPEN     "OPEN"
-#define RESPONSE_ACK      "ACK"
 #define RESPONSE_UNKNOWN  "UNKNOWN"
+#define RESPONSE_BUSY     "BUSY"
 
 // ToDo:
 // Timeout for a field change in rotary encoder
@@ -84,6 +84,8 @@ void referenceRun() {
 
     // turns the lock in closing direction until it blocks
     // to figure out its minimum position
+    
+    Serial.println(RESPONSE_BUSY);
 
     int counter = 0;
     boolean was_interrupted = false;
@@ -138,6 +140,8 @@ void turnLock(int new_position) {
     if( new_position == position
        || new_position < LOCK_CLOSE
        || new_position > DOOR_OPEN ) return;
+
+    Serial.println(RESPONSE_BUSY);
 
     int step;
     int direction;
@@ -281,17 +285,14 @@ void processSerialEvents() {
         switch(incomingByte) {
 
             case 'o':
-              Serial.println(RESPONSE_ACK);
               turnLock(DOOR_OPEN);
               break;
 
             case 'c':
-              Serial.println(RESPONSE_ACK);
               turnLock(LOCK_CLOSE);
               break;
 
             case 'r':
-              Serial.println(RESPONSE_ACK);
               referenceRun();
               break;
 
