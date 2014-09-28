@@ -18,8 +18,8 @@
 #define LOCK_OPEN   9
 #define DOOR_OPEN  10
 
-// delay to use after a field change in rotary encoder
-// this gives the disc some time to move further
+// delay to use after a field change in rotary encoder.
+// This gives the disc some time to move further
 // and avoids counting the same field again
 #define PS_DELAY 10
 
@@ -32,11 +32,11 @@
 #define BUTTON_CLOSE 6
 #define BUTTON_OPEN  7
 
+// "Bitmasks" for the different button combinations.
 #define BUTTONS_PRESSED_NONE  0
 #define BUTTONS_PRESSED_OPEN  1
 #define BUTTONS_PRESSED_CLOSE 2
 #define BUTTONS_PRESSED_BOTH  3
-
 
 // Serial responses
 #define RESPONSE_LOCKED   "LOCKED"
@@ -51,9 +51,12 @@
 // needs to be speed independent
 //#define CH_TIMEOUT
 
+
+// position holds the current position of sphincter.
 int position;
 
 
+// toggleLEDs is a helper func to change the LEDs of sphincter.
 void toggleLEDs(bool r, bool y, bool g) {
 
     digitalWrite(LED_R, r ? HIGH : LOW);
@@ -63,10 +66,9 @@ void toggleLEDs(bool r, bool y, bool g) {
 }
 
 
+// stateChanged is called whenever the state of sphincter has changed.
+// It updates the LEDs and submits the state to sphincterd.
 void stateChanged() {
-
-    // the state of sphincter has changed. Update LEDs
-    // and submit state over serial connection
 
     switch(position) {
 
@@ -77,6 +79,7 @@ void stateChanged() {
 
         case LOCK_OPEN:
             toggleLEDs(false, true, false);
+            Serial.println(RESPONSE_UNLOCKED);
             break;
 
         case DOOR_OPEN:
@@ -92,10 +95,9 @@ void stateChanged() {
 }
 
 
+// referenceRun turns the lock in closing direction until it get stuck to
+// figure out the minimum position.
 void referenceRun() {
-
-    // turns the lock in closing direction until it blocks
-    // to figure out its minimum position
 
     Serial.println(RESPONSE_BUSY);
 
@@ -145,6 +147,8 @@ void referenceRun() {
 }
 
 
+// turnLock turns the lock to new_position. If new_position == DOOR_OPEN the
+// lock will turn back to LOCK_OPEN after a short delay.
 void turnLock(int new_position) {
 
     if( new_position == position
@@ -246,6 +250,7 @@ void turnLock(int new_position) {
 }
 
 
+// processButtonEvents handles sphincter´s onboard buttons.
 void processButtonEvents() {
 
     static unsigned int lp_count_open;
@@ -342,7 +347,7 @@ void processButtonEvents() {
 }
 
 
-
+// processSerialEvents handles incoming requests over serial.
 void processSerialEvents() {
 
     char incomingByte;
@@ -374,7 +379,6 @@ void processSerialEvents() {
     }
 
 }
-
 
 
 void setup()  {
