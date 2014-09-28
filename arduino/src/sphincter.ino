@@ -153,7 +153,10 @@ void turnLock(int new_position) {
 
     if( new_position == position
        || new_position < POSITION_LOCKED
-       || new_position > POSITION_OPEN ) return;
+       || new_position > POSITION_OPEN ) {
+        stateChanged();
+        return;
+    }
 
     Serial.println(RESPONSE_BUSY);
 
