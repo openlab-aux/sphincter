@@ -145,6 +145,12 @@ func (s *Sphincter) request(rq string) (string, error) {
 	return STATE_BUSY, nil
 }
 
+// Reset sedns a reset request to sphincter and blocks until serial data
+// returns.
+func (s *Sphincter) Reset() (string, error) {
+	return s.request("r")
+}
+
 // Open sends an open request to sphincter and blocks until serial data
 // returns.
 func (s *Sphincter) Open() (string, error) {

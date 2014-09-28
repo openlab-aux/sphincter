@@ -22,6 +22,7 @@ const (
 	ACN_OPEN  = "open"
 	ACN_CLOSE = "close"
 	ACN_STATE = "state"
+	ACN_RESET = "reset"
 )
 
 // AuthWorker handles authentication through tokens.
@@ -104,7 +105,7 @@ func (h HttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	token := r.Form.Get("token")
 
 	// need auth
-	if (action == ACN_OPEN || action == ACN_CLOSE) && !h.auth.Auth(token) {
+	if (action == ACN_OPEN || action == ACN_CLOSE || action == ACN_RESET) && !h.auth.Auth(token) {
 		fmt.Fprint(w, "NOT ALLOWED")
 		return
 	}
@@ -123,6 +124,9 @@ func (h HttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		rsp, err = h.sphincter.Close()
+
+	case ACN_RESET:
+		rsp, err = h.sphincter.Reset()
 
 	case ACN_STATE:
 		fmt.Fprintf(w, h.sphincter.State())
