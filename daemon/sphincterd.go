@@ -113,13 +113,21 @@ func (h HttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var rsp string
 
 	switch action {
+
 	case ACN_OPEN:
 		rsp, err = h.sphincter.Open()
+
 	case ACN_CLOSE:
+		if s := h.sphincter.State(); s == sphincter.STATE_LOCKED {
+			fmt.Fprintf(w, s)
+			return
+		}
 		rsp, err = h.sphincter.Close()
+
 	case ACN_STATE:
 		fmt.Fprintf(w, h.sphincter.State())
 		return
+
 	default:
 		fmt.Fprint(w, "INVALID ACTION")
 		return
