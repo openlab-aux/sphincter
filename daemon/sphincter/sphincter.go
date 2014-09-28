@@ -121,17 +121,25 @@ func (s *Sphincter) ListenAndReconnect(chn chan string) {
 
 func (s *Sphincter) request(rq string) (string, error) {
 	if s.state != STATE_BUSY {
+		// forestall the "BUSY response" from sphincter to avoid having more
+		// than one request.
+		s.state = STATE_BUSY
+
 		log.Println("[sphincter] sending serial request: \"" + rq + "\"")
 		if s.ReadWriteCloser == nil {
+			s.state = STATE_UNKNOWN
 			return "", errors.New("write " + s.dev + ": no serial connection established")
 		}
 		_, err := s.Write([]byte(rq))
 		if err != nil {
+			s.state = STATE_UNKNOWN
 			return "", err
 		}
 
 		chn := make(chan string)
 		s.listener = chn
+
+		// wait for serial response and return.
 		return <-chn, nil
 	}
 	return STATE_BUSY, nil
