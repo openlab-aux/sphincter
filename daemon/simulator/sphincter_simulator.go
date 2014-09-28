@@ -19,7 +19,7 @@ const (
 )
 
 func write(ser *io.ReadWriteCloser, data string) {
-	if _, err := ser.Write([]byte(data)); err != nil {
+	if _, err := (*ser).Write([]byte(data + "\r\n")); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -32,7 +32,7 @@ func main() {
 	flag.Parse()
 
 	ser, err := serial.OpenPort(&serial.Config{
-		Name: *dev,
+		Name: *port,
 		Baud: *speed})
 
 	if err != nil {
@@ -44,8 +44,6 @@ func main() {
 	state := STATE_LOCKED
 
 	buf := make([]byte, 128)
-	var inp string
-	var out string
 
 	for {
 		n, err := ser.Read(buf)
@@ -54,42 +52,41 @@ func main() {
 			log.Fatal(err)
 		}
 
-		inp += string(buf[:n])
-		if n > 0 && buf[n-1] == '\n' {
-			sd := strings.Trim(inp, "\r\n")
+		sd := strings.TrimSpace(string(buf[:n]))
+		log.Println("got serial data: ", sd)
 
-			write(&ser, STATE_BUSY)
-			switch sd {
+		write(&ser, STATE_BUSY)
+		switch sd {
 
-			case "o":
-				if state == STATE_LOCKED {
-					time.Sleep(3 * time.Second)
-				} else if state == STATE_UNLOCKED {
-					time.Sleep(0.2 * time.Second)
-				}
-				write(&ser, STATE_OPEN)
-				time.Sleep(0.2 * time.Second)
-				write(&ser, STATE_UNLOCKED)
-				state = STATE_UNLOCKED
-
-			case "c":
-				if state == STATE_UNLOCKED {
-					time.Sleep(2.8 * time.Second)
-				} else if state == STATE_LOCKED {
-					continue
-				}
-				write(&ser, STATE_LOCKED)
-				state = STATE_LOCKED
-
-			case "s":
-
-			default:
-				write(&ser, STATE_UNKNOWN)
-
+		case "o":
+			log.Println("opening the door...")
+			if state == STATE_LOCKED {
+				time.Sleep(3000 * time.Millisecond)
+			} else if state == STATE_UNLOCKED {
+				time.Sleep(200 * time.Millisecond)
 			}
+			write(&ser, STATE_OPEN)
+			time.Sleep(200 * time.Millisecond)
+			state = STATE_UNLOCKED
 
-			inp = ""
+		case "c":
+			if state == STATE_UNLOCKED {
+				log.Println("closing the door...")
+				time.Sleep(2800 * time.Millisecond)
+			} else if state == STATE_LOCKED {
+				log.Println("door allready locked...")
+				time.Sleep(time.Millisecond)
+				write(&ser, state)
+				continue
+			}
+			state = STATE_LOCKED
+
+		case "r":
+			log.Println("REFERENCE RUN...")
+			time.Sleep(4000 * time.Millisecond)
+			state = STATE_LOCKED
+
 		}
-
+		write(&ser, state)
 	}
 }
