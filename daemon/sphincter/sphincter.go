@@ -11,11 +11,11 @@ import (
 )
 
 const (
-	STATE_OPEN     string = "OPEN"
-	STATE_UNLOCKED string = "UNLOCKED"
-	STATE_LOCKED   string = "LOCKED"
-	STATE_UNKNOWN  string = "UNKNOWN"
-	STATE_BUSY     string = "BUSY"
+	STATE_OPEN     = "OPEN"
+	STATE_UNLOCKED = "UNLOCKED"
+	STATE_LOCKED   = "LOCKED"
+	STATE_UNKNOWN  = "UNKNOWN"
+	STATE_BUSY     = "BUSY"
 )
 
 // New returns the pointer to a newly initialized Sphincter.
@@ -47,7 +47,7 @@ func (s *Sphincter) connect() bool {
 		Baud: s.speed})
 
 	if err != nil {
-		log.Println(err)
+		log.Println("[sphincter] " + err.Error())
 		return false
 	}
 	log.Println("[sphincter] connected to sphincter on port " + s.dev)
@@ -79,7 +79,7 @@ func (s *Sphincter) ListenAndReconnect(chn chan string) {
 					n, err = s.Read(buf)
 
 					if err != nil && err != io.EOF {
-						log.Println(err)
+						log.Println("[sphincter] " + err.Error())
 						break
 					}
 
@@ -88,7 +88,7 @@ func (s *Sphincter) ListenAndReconnect(chn chan string) {
 					// see http://arduino.cc/en/Serial/Println
 					out += string(buf[:n])
 					if n > 0 && buf[n-1] == '\n' {
-						sd := strings.Trim(out, "\r\n")
+						sd := strings.TrimSpace(out)
 						log.Println("[sphincter] got serial data: \"" + sd + "\"")
 
 						s.state = sd // update state cache
@@ -97,10 +97,10 @@ func (s *Sphincter) ListenAndReconnect(chn chan string) {
 
 							// if we have a listener, pass the response to it
 							// and close/remove it.
-							if s.listener != nil && sd != STATE_UNLOCKED {
+							if s.listener != nil && sd != STATE_OPEN {
 								select {
 								case s.listener <- sd:
-									log.Printf("[sphincter] sent response '%s' to listener", sd)
+									log.Printf("[sphincter] sent response \"%s\" to listener", sd)
 								default:
 									log.Println("[sphincter] response listener seems dead")
 								}
