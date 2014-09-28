@@ -14,9 +14,9 @@
 #define SPEED_REF   70
 
 // lock positions (rotary encoder steps)
-#define LOCK_CLOSE  0
-#define LOCK_OPEN   9
-#define DOOR_OPEN  10
+#define POSITION_LOCKED    0
+#define POSITION_UNLOCKED  9
+#define POSITION_OPEN     10
 
 // delay to use after a field change in rotary encoder.
 // This gives the disc some time to move further
@@ -72,17 +72,17 @@ void stateChanged() {
 
     switch(position) {
 
-        case LOCK_CLOSE:
+        case POSITION_LOCKED:
             toggleLEDs(true, false, false);
             Serial.println(RESPONSE_LOCKED);
             break;
 
-        case LOCK_OPEN:
+        case POSITION_UNLOCKED:
             toggleLEDs(false, true, false);
             Serial.println(RESPONSE_UNLOCKED);
             break;
 
-        case DOOR_OPEN:
+        case POSITION_OPEN:
             toggleLEDs(false, false, true);
             Serial.println(RESPONSE_OPEN);
             break;
@@ -147,13 +147,13 @@ void referenceRun() {
 }
 
 
-// turnLock turns the lock to new_position. If new_position == DOOR_OPEN the
-// lock will turn back to LOCK_OPEN after a short delay.
+// turnLock turns the lock to new_position. If new_position == POSITION_OPEN
+// the lock will turn back to POSITION_UNLOCKED after a short delay.
 void turnLock(int new_position) {
 
     if( new_position == position
-       || new_position < LOCK_CLOSE
-       || new_position > DOOR_OPEN ) return;
+       || new_position < POSITION_LOCKED
+       || new_position > POSITION_OPEN ) return;
 
     Serial.println(RESPONSE_BUSY);
 
@@ -209,7 +209,7 @@ void turnLock(int new_position) {
             break;
         }
 
-        if( (new_position == LOCK_CLOSE) && position > LOCK_CLOSE + 3) {
+        if( (new_position == POSITION_LOCKED) && position > POSITION_LOCKED + 3) {
             analogWrite(PIN_PWM, SPEED_SLOW);
         }
         else {
@@ -242,9 +242,9 @@ void turnLock(int new_position) {
     stateChanged();
 
     // turn back after opened the door
-    if( new_position == DOOR_OPEN ) {
+    if( new_position == POSITION_OPEN ) {
         delay(300);
-        turnLock(LOCK_OPEN);
+        turnLock(POSITION_UNLOCKED);
     }
 
 }
@@ -308,7 +308,7 @@ void processButtonEvents() {
                                 delay(50);
                             }
                             toggleLEDs(false, false, false);
-                            turnLock(LOCK_CLOSE);
+                            turnLock(POSITION_LOCKED);
                             lp_count_close = 0;
                             break;
                     }
@@ -329,11 +329,11 @@ void processButtonEvents() {
 
         // here comes the "on button up" stuff
         if( lp_count_open > 10 ) {
-            turnLock(DOOR_OPEN);
+            turnLock(POSITION_OPEN);
         }
         if( lp_count_close > 10 ) {
             if(lp_count_close < 1000) {
-                turnLock(LOCK_CLOSE);
+                turnLock(POSITION_LOCKED);
             }
             else {
                 // reset LEDs
@@ -360,11 +360,11 @@ void processSerialEvents() {
         switch(incomingByte) {
 
             case 'o':
-              turnLock(DOOR_OPEN);
+              turnLock(POSITION_OPEN);
               break;
 
             case 'c':
-              turnLock(LOCK_CLOSE);
+              turnLock(POSITION_LOCKED);
               break;
 
             case 'r':
