@@ -44,16 +44,20 @@
 #define RESPONSE_OPEN     "OPEN"
 #define RESPONSE_UNKNOWN  "UNKNOWN"
 #define RESPONSE_BUSY     "BUSY"
+#define RESPONSE_FAILURE  "FAILURE"
 
-// TODO:
-// Timeout for a field change in rotary encoder
-// = maximum time between two fields
-// needs to be speed independent
-//#define CH_TIMEOUT
+// Timeout for a field change in the rotary encoder
+// = maximum time between two fields in ms
+#define FIELD_CHANGE_TIMEOUT 800
 
 
 // position holds the current position of sphincter.
 int position;
+
+int timeout_count = 0;
+void timeoutCounter() {
+    timeout_count += 10;
+}
 
 
 // toggleLEDs is a helper func to change the LEDs of sphincter.
@@ -153,7 +157,10 @@ void turnLock(int new_position) {
 
     if( new_position == position
        || new_position < POSITION_LOCKED
-       || new_position > POSITION_OPEN ) {
+       || new_position > POSITION_OPEN
+       || ( position != POSITION_OPEN
+         && position != POSITION_LOCKED
+         && position != POSITION_UNLOCKED )) {
         stateChanged();
         return;
     }
@@ -181,6 +188,8 @@ void turnLock(int new_position) {
 
     }
 
+    timeout_count = 0;
+    Timer1.attachInterrupt(timeoutCounter);
 
     digitalWrite(direction, HIGH);  // motor power on
 
@@ -196,6 +205,7 @@ void turnLock(int new_position) {
 
             position += step;
             was_interrupted = true;
+            timeout_count = 0;
 
         }
         // photo sensor becomes free
@@ -217,6 +227,14 @@ void turnLock(int new_position) {
         }
         else {
             analogWrite(PIN_PWM, SPEED_FAST);
+        }
+
+        // FIXME write a better timeout handling.
+        if (timeout_count > FIELD_CHANGE_TIMEOUT) {
+            digitalWrite(direction, LOW);  // motor power off
+            position = -1;
+            Serial.println(RESPONSE_FAILURE);
+            return;
         }
 
     }
@@ -385,6 +403,9 @@ void processSerialEvents() {
 
 
 void setup()  {
+
+    // init timer interrupt (10ms)
+    Timer1.initialize(10000);
 
     // initialize pins
     pinMode(LED_R,     OUTPUT);
