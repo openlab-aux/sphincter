@@ -1,3 +1,6 @@
 [submodule "firmware"]
 	path = firmware
 	url = git@github.com:openlab-aux/sphincter-firmware.git
+[submodule "android"]
+	path = android
+	url = git@github.com:openlab-aux/sphincter-remote.git
