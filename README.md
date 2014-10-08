@@ -7,3 +7,5 @@ there are
 * a daemon that connects to the device via UART and exposes a HTTP API
 * various client implementations
 * other related files (e.g. PCB layourt for the shield, etc.)
+
+![sphincter installed](misc/sphincter.jpg)
