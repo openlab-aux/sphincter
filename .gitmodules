@@ -4,3 +4,6 @@
 [submodule "android"]
 	path = android
 	url = git@github.com:openlab-aux/sphincter-remote.git
+[submodule "daemon"]
+	path = daemon
+	url = git@github.com:openlab-aux/sphincterd.git
